@@ -1,4 +1,4 @@
-package java.com.backoffice.models;
+package com.backoffice.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

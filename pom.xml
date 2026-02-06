@@ -50,6 +50,7 @@
     </dependencies>
 
     <build>
+        <finalName>backoffice-CICD</finalName>
         <plugins>
             <!-- Plugin pour compiler et packager en WAR -->
             <plugin>

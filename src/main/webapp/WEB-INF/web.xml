@@ -5,6 +5,18 @@
          http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
          version="3.1">
 
+    <!-- Scan automatique de tous les packages dans src/main/java -->
+    <context-param>
+        <param-name>packagesToScan</param-name>
+        <param-value></param-value>
+    </context-param>
+
+    <!-- Répertoire de base pour les vues (JSP, HTML, etc.) -->
+    <context-param>
+        <param-name>viewPath</param-name>
+        <param-value>/templates/</param-value>
+    </context-param>
+
     <servlet>
         <servlet-name>FrontServlet</servlet-name>
         <servlet-class>itu.framework.servlet.FrontServlet</servlet-class>

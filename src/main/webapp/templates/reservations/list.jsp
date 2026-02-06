@@ -1,4 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.util.List" %>
+<%@ page import="com.backoffice.models.Reservation" %>
 <html>
 <head>
     <title>Liste des réservations</title>
@@ -50,7 +52,22 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Les données seront remplies dynamiquement -->
+            <%
+                List<Reservation> reservations = (List<Reservation>) request.getAttribute("reservations");
+                if (reservations != null) {
+                    for (Reservation r : reservations) {
+            %>
+            <tr>
+                <td><%= r.getIdReservation() %></td>
+                <td><%= r.getIdClient() %></td>
+                <td><%= r.getNbPassager() %></td>
+                <td><%= r.getDateHeureArrivee() %></td>
+                <td><%= r.getIdHotel() %></td>
+            </tr>
+            <%
+                    }
+                }
+            %>
         </tbody>
     </table>
 
