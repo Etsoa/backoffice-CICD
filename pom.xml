@@ -5,9 +5,9 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>java.com.backoffice</groupId>
-    <artifactId>backoffice</artifactId>
-    <version>1.0</version>
+    <groupId>com.monnom</groupId>
+    <artifactId>MonProjet</artifactId>
+    <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
     <properties>
@@ -17,20 +17,27 @@
     </properties>
 
     <dependencies>
+        <!-- Ajoute ici la dépendance vers ton framework -->
         <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <version>6.0.0</version>
-            <scope>provided</scope>
+            <groupId>itu.framework</groupId>
+            <artifactId>framework-sprint</artifactId>
+            <version>1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/framework-sprint-1.jar</systemPath>
         </dependency>
+        <!-- Ajoute d'autres dépendances si besoin -->
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Plugin pour compiler et packager en WAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>3.3.2</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
             </plugin>
         </plugins>
     </build>
