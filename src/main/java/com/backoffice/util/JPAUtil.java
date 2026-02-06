@@ -1,4 +1,4 @@
-package java.com.backoffice.util;
+package com.backoffice.util;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;

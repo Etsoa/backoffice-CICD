@@ -1,16 +1,16 @@
-package java.com.backoffice.controller;
+package com.backoffice.controller;
 
 import itu.framework.annotations.MyController;
 import itu.framework.annotations.MyURL;
 import itu.framework.model.ModelView;
 import itu.framework.model.JsonResponse;
-import java.com.backoffice.models.Reservation;
+import com.backoffice.models.Reservation;
 import java.util.HashMap;
 import java.util.List;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
-import java.com.backoffice.util.JPAUtil;
+import com.backoffice.util.JPAUtil;
 
 @MyController(value = "Reservation")
 public class ReservationController {

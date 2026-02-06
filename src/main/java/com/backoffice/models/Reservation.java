@@ -1,4 +1,4 @@
-package java.com.backoffice.models;
+package com.backoffice.models;
 
 import java.sql.Timestamp;
 

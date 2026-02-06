@@ -1,4 +1,4 @@
-package java.com.backoffice.controller;
+package com.backoffice.controller;
 
 // import java.util.HashMap;
 // import java.util.ArrayList;

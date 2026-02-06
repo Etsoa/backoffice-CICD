@@ -8,9 +8,9 @@
     <persistence-unit name="backoffice-pu" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
-        <class>java.com.backoffice.models.Client</class>
-        <class>java.com.backoffice.models.Hotel</class>
-        <class>java.com.backoffice.models.Reservation</class>
+        <class>com.backoffice.models.Client</class>
+        <class>com.backoffice.models.Hotel</class>
+        <class>com.backoffice.models.Reservation</class>
 
         <!-- Les propriétés sont injectées dynamiquement depuis application.properties via JPAUtil -->
     </persistence-unit>
