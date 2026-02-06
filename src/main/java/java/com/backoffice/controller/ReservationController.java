@@ -9,18 +9,15 @@ import java.util.HashMap;
 import java.util.List;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
 import jakarta.persistence.TypedQuery;
+import java.com.backoffice.util.JPAUtil;
 
 @MyController(value = "Reservation")
 public class ReservationController {
 
-    private EntityManagerFactory emf = Persistence.createEntityManagerFactory("backoffice-pu");
-
     @MyURL(value = "/reservations", method = "GET")
     public ModelView listReservations(HashMap<String, Object> params) {
-        EntityManager em = emf.createEntityManager();
+        EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("reservations/list.jsp");
 
         try {
@@ -51,7 +48,7 @@ public class ReservationController {
 
     @MyURL(value = "/reservations", method = "POST")
     public ModelView createReservation(Reservation reservation) {
-        EntityManager em = emf.createEntityManager();
+        EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("reservations/list.jsp");
 
         try {
@@ -77,7 +74,7 @@ public class ReservationController {
 
     @MyURL(value = "/api/reservations", method = "GET")
     public JsonResponse apiListReservations(HashMap<String, Object> params) {
-        EntityManager em = emf.createEntityManager();
+        EntityManager em = JPAUtil.getEntityManager();
 
         try {
             List<Reservation> reservations;
