@@ -13,45 +13,33 @@ public class Hotel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_hotel")
-    private int idHotel;
+    @Column(name = "id")
+    private int id;
 
-    @Column(name = "nom", nullable = false, length = 100)
-    private String nom;
-
-    @Column(name = "adresse", length = 200)
-    private String adresse;
+    @Column(name = "libelle", nullable = false, length = 100)
+    private String libelle;
 
     public Hotel() {
     }
 
-    public Hotel(int idHotel, String nom, String adresse) {
-        this.idHotel = idHotel;
-        this.nom = nom;
-        this.adresse = adresse;
+    public Hotel(int id, String libelle) {
+        this.id = id;
+        this.libelle = libelle;
     }
 
-    public int getIdHotel() {
-        return idHotel;
+    public int getId() {
+        return id;
     }
 
-    public void setIdHotel(int idHotel) {
-        this.idHotel = idHotel;
+    public void setId(int id) {
+        this.id = id;
     }
 
-    public String getNom() {
-        return nom;
+    public String getLibelle() {
+        return libelle;
     }
 
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
-
-    public String getAdresse() {
-        return adresse;
-    }
-
-    public void setAdresse(String adresse) {
-        this.adresse = adresse;
+    public void setLibelle(String libelle) {
+        this.libelle = libelle;
     }
 }

@@ -1,0 +1,4 @@
+\c postgres;
+DROP DATABASE IF EXISTS cicd;
+CREATE DATABASE cicd;
+\c cicd;

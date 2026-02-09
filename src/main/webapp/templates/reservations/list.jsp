@@ -45,9 +45,10 @@
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Client</th>
-                <th>Nb Passagers</th>
-                <th>Date/Heure Arrivée</th>
+                <th>Référence</th>
+                <th>Nombre</th>
+                <th>Date</th>
+                <th>Heure</th>
                 <th>Hôtel</th>
             </tr>
         </thead>
@@ -58,11 +59,12 @@
                     for (Reservation r : reservations) {
             %>
             <tr>
-                <td><%= r.getIdReservation() %></td>
-                <td><%= r.getIdClient() %></td>
-                <td><%= r.getNbPassager() %></td>
-                <td><%= r.getDateHeureArrivee() %></td>
-                <td><%= r.getIdHotel() %></td>
+                <td><%= r.getId() %></td>
+                <td><%= r.getReference() %></td>
+                <td><%= r.getNombre() %></td>
+                <td><%= r.getDate() %></td>
+                <td><%= r.getHeure() %></td>
+                <td><%= r.getHotel() %></td>
             </tr>
             <%
                     }

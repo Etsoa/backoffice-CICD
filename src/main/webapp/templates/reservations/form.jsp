@@ -18,17 +18,20 @@
     <h1>Nouvelle réservation</h1>
 
     <form action="${pageContext.request.contextPath}/reservations" method="POST">
-        <label for="idClient">ID Client (4 chiffres)</label>
-        <input type="text" id="idClient" name="idClient" maxlength="4" pattern="[0-9]{4}" required placeholder="ex: 0001"/>
+        <label for="reference">Référence</label>
+        <input type="number" id="reference" name="reference" required placeholder="ex: 4631"/>
 
-        <label for="nbPassager">Nombre de passagers</label>
-        <input type="number" id="nbPassager" name="nbPassager" min="1" required placeholder="ex: 2"/>
+        <label for="nombre">Nombre de personnes</label>
+        <input type="number" id="nombre" name="nombre" min="1" required placeholder="ex: 2"/>
 
-        <label for="dateHeureArrivee">Date et heure d'arrivée</label>
-        <input type="datetime-local" id="dateHeureArrivee" name="dateHeureArrivee" required/>
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required/>
 
-        <label for="idHotel">ID Hôtel</label>
-        <input type="number" id="idHotel" name="idHotel" min="1" required placeholder="ex: 1"/>
+        <label for="heure">Heure</label>
+        <input type="time" id="heure" name="heure" required/>
+
+        <label for="hotel">ID Hôtel</label>
+        <input type="number" id="hotel" name="hotel" min="1" required placeholder="ex: 1"/>
 
         <button type="submit" class="btn">Créer la réservation</button>
     </form>

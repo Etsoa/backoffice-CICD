@@ -1,16 +1,17 @@
 package com.backoffice.controller;
 
-import itu.framework.annotations.MyController;
-import itu.framework.annotations.MyURL;
-import itu.framework.model.ModelView;
-import itu.framework.model.JsonResponse;
-import com.backoffice.models.Reservation;
 import java.util.HashMap;
 import java.util.List;
 
+import com.backoffice.models.Reservation;
+import com.backoffice.util.JPAUtil;
+
+import itu.framework.annotations.MyController;
+import itu.framework.annotations.MyURL;
+import itu.framework.model.JsonResponse;
+import itu.framework.model.ModelView;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
-import com.backoffice.util.JPAUtil;
 
 @MyController(value = "Reservation")
 public class ReservationController {
@@ -25,7 +26,7 @@ public class ReservationController {
             if (params != null && params.get("dateFiltre") != null && !params.get("dateFiltre").toString().isEmpty()) {
                 String dateFiltre = params.get("dateFiltre").toString();
                 TypedQuery<Reservation> query = em.createQuery(
-                        "SELECT r FROM Reservation r WHERE CAST(r.dateHeureArrivee AS date) = CAST(:dateFiltre AS date)",
+                        "SELECT r FROM Reservation r WHERE r.date = :dateFiltre",
                         Reservation.class);
                 query.setParameter("dateFiltre", java.sql.Date.valueOf(dateFiltre));
                 reservations = query.getResultList();
@@ -81,7 +82,7 @@ public class ReservationController {
             if (params != null && params.get("dateFiltre") != null && !params.get("dateFiltre").toString().isEmpty()) {
                 String dateFiltre = params.get("dateFiltre").toString();
                 TypedQuery<Reservation> query = em.createQuery(
-                        "SELECT r FROM Reservation r WHERE CAST(r.dateHeureArrivee AS date) = CAST(:dateFiltre AS date)",
+                        "SELECT r FROM Reservation r WHERE r.date = :dateFiltre",
                         Reservation.class);
                 query.setParameter("dateFiltre", java.sql.Date.valueOf(dateFiltre));
                 reservations = query.getResultList();

@@ -1,6 +1,7 @@
 package com.backoffice.models;
 
-import java.sql.Timestamp;
+import java.sql.Date;
+import java.sql.Time;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,69 +16,81 @@ public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_reservation")
-    private Integer idReservation;
+    @Column(name = "id")
+    private Integer id;
 
-    @Column(name = "id_client", nullable = false, length = 4)
-    private String idClient;
+    @Column(name = "reference", nullable = false)
+    private Integer reference;
 
-    @Column(name = "nb_passager", nullable = false)
-    private Integer nbPassager;
+    @Column(name = "nombre", nullable = false)
+    private Integer nombre;
 
-    @Column(name = "date_heure_arrivee", nullable = false)
-    private Timestamp dateHeureArrivee;
+    @Column(name = "date", nullable = false)
+    private Date date;
 
-    @Column(name = "id_hotel", nullable = false)
-    private Integer idHotel;
+    @Column(name = "heure", nullable = false)
+    private Time heure;
+
+    @Column(name = "hotel", nullable = false)
+    private Integer hotel;
 
     public Reservation() {
     }
 
-    public Reservation(Integer idReservation, String idClient, Integer nbPassager, Timestamp dateHeureArrivee, Integer idHotel) {
-        this.idReservation = idReservation;
-        this.idClient = idClient;
-        this.nbPassager = nbPassager;
-        this.dateHeureArrivee = dateHeureArrivee;
-        this.idHotel = idHotel;
+    public Reservation(Integer id, Integer reference, Integer nombre, Date date, Time heure, Integer hotel) {
+        this.id = id;
+        this.reference = reference;
+        this.nombre = nombre;
+        this.date = date;
+        this.heure = heure;
+        this.hotel = hotel;
     }
 
-    public Integer getIdReservation() {
-        return idReservation;
+    public Integer getId() {
+        return id;
     }
 
-    public void setIdReservation(Integer idReservation) {
-        this.idReservation = idReservation;
+    public void setId(Integer id) {
+        this.id = id;
     }
 
-    public String getIdClient() {
-        return idClient;
+    public Integer getReference() {
+        return reference;
     }
 
-    public void setIdClient(String idClient) {
-        this.idClient = idClient;
+    public void setReference(Integer reference) {
+        this.reference = reference;
     }
 
-    public Integer getNbPassager() {
-        return nbPassager;
+    public Integer getNombre() {
+        return nombre;
     }
 
-    public void setNbPassager(Integer nbPassager) {
-        this.nbPassager = nbPassager;
+    public void setNombre(Integer nombre) {
+        this.nombre = nombre;
     }
 
-    public Timestamp getDateHeureArrivee() {
-        return dateHeureArrivee;
+    public Date getDate() {
+        return date;
     }
 
-    public void setDateHeureArrivee(Timestamp dateHeureArrivee) {
-        this.dateHeureArrivee = dateHeureArrivee;
+    public void setDate(Date date) {
+        this.date = date;
     }
 
-    public Integer getIdHotel() {
-        return idHotel;
+    public Time getHeure() {
+        return heure;
     }
 
-    public void setIdHotel(Integer idHotel) {
-        this.idHotel = idHotel;
+    public void setHeure(Time heure) {
+        this.heure = heure;
+    }
+
+    public Integer getHotel() {
+        return hotel;
+    }
+
+    public void setHotel(Integer hotel) {
+        this.hotel = hotel;
     }
 }
