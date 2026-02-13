@@ -17,6 +17,17 @@
         <param-value>/templates/</param-value>
     </context-param>
 
+    <!-- CORS Filter -->
+    <filter>
+        <filter-name>CorsFilter</filter-name>
+        <filter-class>com.backoffice.filter.CorsFilter</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>CorsFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <servlet>
         <servlet-name>FrontServlet</servlet-name>
         <servlet-class>itu.framework.servlet.FrontServlet</servlet-class>
