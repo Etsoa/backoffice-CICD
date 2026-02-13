@@ -26,6 +26,21 @@ CREATE TABLE reservation (
     FOREIGN KEY (hotel) REFERENCES hotel(id)
 );
 
+-- Table véhicules (Sprint 2)
+CREATE TABLE vehicule (
+    id SERIAL PRIMARY KEY,
+    reference VARCHAR(50) NOT NULL UNIQUE,
+    place INT NOT NULL,
+    type_carburant VARCHAR(10) NOT NULL CHECK (type_carburant IN ('D', 'Es', 'H', 'El'))
+);
+
+-- Table tokens (Sprint 2 - Protection)
+CREATE TABLE token (
+    id SERIAL PRIMARY KEY,
+    valeur_token VARCHAR(16) NOT NULL UNIQUE,
+    date_expiration TIMESTAMP NULL
+);
+
 -- Initialisation des hôtels
 INSERT INTO hotel (libelle) VALUES
 ('Colbert'),
@@ -42,8 +57,11 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 (8054, 2, '2026-02-09', '10:17', 1),
 (1432, 4, '2026-02-01', '15:25', 2),
 (7861, 4, '2026-01-28', '07:11', 1),
-(4484, 13, '2026-02-28', '08:25', 2),
-(9687, 8, '2026-02-28', '13:00', 2),
-(6302, 7, '2026-02-15', '13:00', 1),
-(8640, 1, '2026-02-18', '22:55', 4);
 (3308, 5, '2026-01-28', '07:45', 1);
+
+-- Initialisation des véhicules
+INSERT INTO vehicule (reference, place, type_carburant) VALUES
+('VH-2026-001', 5, 'Es'),
+('VH-2026-002', 7, 'D'),
+('VH-2026-003', 5, 'El'),
+('VH-2026-004', 4, 'H');
