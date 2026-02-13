@@ -11,6 +11,8 @@
         <class>com.backoffice.models.Client</class>
         <class>com.backoffice.models.Hotel</class>
         <class>com.backoffice.models.Reservation</class>
+        <class>com.backoffice.models.Vehicule</class>
+        <class>com.backoffice.models.Token</class>
 
         <!-- Les propriétés sont injectées dynamiquement depuis application.properties via JPAUtil -->
     </persistence-unit>
