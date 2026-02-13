@@ -2,7 +2,9 @@ package com.backoffice.controller;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import com.backoffice.dto.ReservationDTO;
 import com.backoffice.models.Reservation;
 import com.backoffice.util.JPAUtil;
 
@@ -89,7 +91,13 @@ public class ReservationController {
             } else {
                 reservations = em.createQuery("SELECT r FROM Reservation r", Reservation.class).getResultList();
             }
-            return JsonResponse.success(reservations, "Liste des réservations");
+            
+            // Convertir les Reservation en ReservationDTO pour une meilleure sérialisation JSON
+            List<ReservationDTO> reservationDTOs = reservations.stream()
+                    .map(ReservationDTO::new)
+                    .collect(Collectors.toList());
+            
+            return JsonResponse.success(reservationDTOs, "Liste des réservations");
         } catch (Exception e) {
             return JsonResponse.error(500, e.getMessage());
         } finally {
