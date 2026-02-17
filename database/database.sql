@@ -31,7 +31,25 @@ CREATE TABLE vehicule (
     id SERIAL PRIMARY KEY,
     reference VARCHAR(50) NOT NULL UNIQUE,
     place INT NOT NULL,
-    type_carburant VARCHAR(10) NOT NULL CHECK (type_carburant IN ('D', 'Es', 'H', 'El'))
+    type_carburant VARCHAR(10) NOT NULL CHECK (type_carburant IN ('D', 'Es', 'H', 'El')),
+    vitesse_moyenne DECIMAL(5,2) NOT NULL DEFAULT 60.00 -- en km/h
+);
+
+-- Table lieux (Sprint 3 - Planification)
+CREATE TABLE lieu (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(10) NOT NULL UNIQUE,
+    libelle VARCHAR(100) NOT NULL
+);
+
+-- Table distances (Sprint 3 - Planification)
+CREATE TABLE distance (
+    id SERIAL PRIMARY KEY,
+    lieu_depart INT NOT NULL,
+    lieu_arrivee INT NOT NULL,
+    km DECIMAL(6,2) NOT NULL,
+    FOREIGN KEY (lieu_depart) REFERENCES lieu(id),
+    FOREIGN KEY (lieu_arrivee) REFERENCES lieu(id)
 );
 
 -- Table tokens (Sprint 2 - Protection)
@@ -59,9 +77,30 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 (7861, 4, '2026-01-28', '07:11', 1),
 (3308, 5, '2026-01-28', '07:45', 1);
 
+-- Initialisation des lieux
+INSERT INTO lieu (code, libelle) VALUES
+('TNR', 'Ivato'),          -- Aéroport
+('COL', 'Colbert'),
+('NOV', 'Novotel'),
+('IBL', 'Ibis'),
+('LOK', 'Lokanga');
+
+-- Initialisation des distances (de l'aéroport vers les hôtels)
+INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
+(1, 2, 18.5),  -- Ivato -> Colbert
+(1, 3, 16.2),  -- Ivato -> Novotel
+(1, 4, 17.8),  -- Ivato -> Ibis
+(1, 5, 19.3),  -- Ivato -> Lokanga
+(2, 1, 18.5),  -- Colbert -> Ivato
+(3, 1, 16.2),  -- Novotel -> Ivato
+(4, 1, 17.8),  -- Ibis -> Ivato
+(5, 1, 19.3);  -- Lokanga -> Ivato
+
 -- Initialisation des véhicules
-INSERT INTO vehicule (reference, place, type_carburant) VALUES
-('VH-2026-001', 5, 'Es'),
-('VH-2026-002', 7, 'D'),
-('VH-2026-003', 5, 'El'),
-('VH-2026-004', 4, 'H');
+INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
+('VH-2026-001', 5, 'Es', 55.0),
+('VH-2026-002', 7, 'D', 60.0),
+('VH-2026-003', 5, 'El', 50.0),
+('VH-2026-004', 4, 'H', 58.0),
+('VH-2026-005', 12, 'D', 55.0),
+('VH-2026-006', 18, 'D', 50.0);
