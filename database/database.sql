@@ -65,3 +65,8 @@ INSERT INTO vehicule (reference, place, type_carburant) VALUES
 ('VH-2026-002', 7, 'D'),
 ('VH-2026-003', 5, 'El'),
 ('VH-2026-004', 4, 'H');
+
+
+
+
+et suqqrimer ca donne ca Erreur: Cannot invoke "java.util.HashMap.get(Object)" because "params" is null
