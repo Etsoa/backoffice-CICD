@@ -4,8 +4,10 @@ CREATE DATABASE cicd;
 \c cicd;
 
 
-DROP TABLE client;
-DROP TABLE hotel cascade;
-DROP TABLE reservation;
-DROP TABLE vehicule;
-DROP TABLE token;
+DROP TABLE IF EXISTS distance;
+DROP TABLE IF EXISTS lieu;
+DROP TABLE IF EXISTS token;
+DROP TABLE IF EXISTS reservation;
+DROP TABLE IF EXISTS vehicule;
+DROP TABLE IF EXISTS hotel cascade;
+DROP TABLE IF EXISTS client;

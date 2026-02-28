@@ -1,19 +1,16 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.List" %>
 <%@ page import="com.backoffice.models.Hotel" %>
-<%@ page import="com.backoffice.models.Reservation" %>
 <%
     Boolean editMode = (Boolean) request.getAttribute("editMode");
     boolean isEdit = editMode != null && editMode;
-    Reservation reservation = (Reservation) request.getAttribute("reservation");
-    List<Hotel> hotels = (List<Hotel>) request.getAttribute("hotels");
+    Hotel hotel = (Hotel) request.getAttribute("hotel");
 %>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= isEdit ? "Modifier" : "Nouvelle" %> reservation</title>
+    <title><%= isEdit ? "Modifier" : "Nouvel" %> hotel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -68,13 +65,13 @@
             <a href="${pageContext.request.contextPath}/">
                 <i class="fas fa-home"></i> Tableau de bord
             </a>
-            <a href="${pageContext.request.contextPath}/reservations" class="active">
+            <a href="${pageContext.request.contextPath}/reservations">
                 <i class="fas fa-calendar-check"></i> Reservations
             </a>
             <a href="${pageContext.request.contextPath}/vehicules">
                 <i class="fas fa-car"></i> Vehicules
             </a>
-            <a href="${pageContext.request.contextPath}/hotels">
+            <a href="${pageContext.request.contextPath}/hotels" class="active">
                 <i class="fas fa-hotel"></i> Hotels
             </a>
             <a href="${pageContext.request.contextPath}/planification">
@@ -85,7 +82,7 @@
 
     <main class="main">
         <div class="page-header">
-            <h1><i class="fas fa-calendar-check" style="color:#1a73e8;"></i> <%= isEdit ? "Modifier la" : "Nouvelle" %> reservation</h1>
+            <h1><i class="fas fa-hotel" style="color:#1a73e8;"></i> <%= isEdit ? "Modifier l'" : "Nouvel" %> hotel</h1>
         </div>
 
         <div class="form-card">
@@ -93,53 +90,22 @@
                 <h2><i class="fas fa-<%= isEdit ? "edit" : "plus-circle" %>"></i> <%= isEdit ? "Modifier les informations" : "Remplir les informations" %></h2>
             </div>
             <div class="form-card-body">
-                <form action="${pageContext.request.contextPath}/<%= isEdit ? "reservations/update" : "reservations" %>" method="POST">
-                    <% if (isEdit && reservation != null) { %>
-                        <input type="hidden" name="id" value="<%= reservation.getId() %>"/>
+                <form action="${pageContext.request.contextPath}/<%= isEdit ? "hotels/update" : "hotels" %>" method="POST">
+                    <% if (isEdit && hotel != null) { %>
+                        <input type="hidden" name="id" value="<%= hotel.getId() %>"/>
                     <% } %>
 
                     <div class="form-group">
-                        <label for="reference"><i class="fas fa-hashtag"></i> Reference</label>
-                        <input type="number" id="reference" name="reference" class="form-control" required placeholder="ex: 4631"
-                               value="<%= isEdit && reservation != null ? reservation.getReference() : "" %>"/>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="nombre"><i class="fas fa-users"></i> Nombre de personnes</label>
-                        <input type="number" id="nombre" name="nombre" class="form-control" min="1" required placeholder="ex: 2"
-                               value="<%= isEdit && reservation != null ? reservation.getNombre() : "" %>"/>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="date"><i class="fas fa-calendar"></i> Date</label>
-                        <input type="date" id="date" name="date" class="form-control" required
-                               value="<%= isEdit && reservation != null ? reservation.getDate() : "" %>"/>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="heure"><i class="fas fa-clock"></i> Heure</label>
-                        <input type="time" id="heure" name="heure" class="form-control" required
-                               value="<%= isEdit && reservation != null ? reservation.getHeure().toString().substring(0, 5) : "" %>"/>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="hotel"><i class="fas fa-hotel"></i> Hotel</label>
-                        <select id="hotel" name="hotel" class="form-control" required>
-                            <option value="">-- Selectionner un hotel --</option>
-                            <% if (hotels != null) {
-                                for (Hotel h : hotels) {
-                                    boolean selected = isEdit && reservation != null && reservation.getHotel() == h.getId();
-                            %>
-                            <option value="<%= h.getId() %>" <%= selected ? "selected" : "" %>><%= h.getLibelle() %></option>
-                            <% }} %>
-                        </select>
+                        <label for="libelle"><i class="fas fa-tag"></i> Libelle</label>
+                        <input type="text" id="libelle" name="libelle" class="form-control" required placeholder="ex: Colbert"
+                               value="<%= isEdit && hotel != null ? hotel.getLibelle() : "" %>" maxlength="100"/>
                     </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-<%= isEdit ? "save" : "plus" %>"></i> <%= isEdit ? "Mettre a jour" : "Creer" %>
                         </button>
-                        <a href="${pageContext.request.contextPath}/reservations" class="btn btn-secondary">
+                        <a href="${pageContext.request.contextPath}/hotels" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Annuler
                         </a>
                     </div>
