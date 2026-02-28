@@ -19,6 +19,8 @@
         .module.vehicules a:hover { background-color: #1976D2; }
         .module.hotels a { background-color: #ff9800; }
         .module.hotels a:hover { background-color: #f57c00; }
+        .module.planification a { background-color: #9c27b0; }
+        .module.planification a:hover { background-color: #7b1fa2; }
         .emoji { font-size: 48px; margin-bottom: 15px; }
     </style>
 </head>
@@ -46,6 +48,13 @@
                 <h2>Hôtels</h2>
                 <p>Gérer les hôtels partenaires</p>
                 <a href="${pageContext.request.contextPath}/hotels">Accéder</a>
+            </div>
+            
+            <div class="module planification">
+                <div class="emoji">📋</div>
+                <h2>Planification</h2>
+                <p>Planning des véhicules et transferts</p>
+                <a href="${pageContext.request.contextPath}/planification">Accéder</a>
             </div>
         </div>
     </div>

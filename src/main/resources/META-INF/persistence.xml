@@ -13,6 +13,8 @@
         <class>com.backoffice.models.Reservation</class>
         <class>com.backoffice.models.Vehicule</class>
         <class>com.backoffice.models.Token</class>
+        <class>com.backoffice.models.Lieu</class>
+        <class>com.backoffice.models.Distance</class>
 
         <!-- Les propriétés sont injectées dynamiquement depuis application.properties via JPAUtil -->
     </persistence-unit>

@@ -45,6 +45,9 @@ public class Vehicule {
     @Column(name = "type_carburant", nullable = false, length = 10)
     private TypeCarburant typeCarburant;
 
+    @Column(name = "vitesse_moyenne", nullable = false)
+    private Double vitesseMoyenne; // en km/h
+
     public Vehicule() {
     }
 
@@ -53,6 +56,15 @@ public class Vehicule {
         this.reference = reference;
         this.place = place;
         this.typeCarburant = typeCarburant;
+        this.vitesseMoyenne = 60.0; // Valeur par défaut
+    }
+
+    public Vehicule(Integer id, String reference, Integer place, TypeCarburant typeCarburant, Double vitesseMoyenne) {
+        this.id = id;
+        this.reference = reference;
+        this.place = place;
+        this.typeCarburant = typeCarburant;
+        this.vitesseMoyenne = vitesseMoyenne;
     }
 
     public Integer getId() {
@@ -85,5 +97,13 @@ public class Vehicule {
 
     public void setTypeCarburant(TypeCarburant typeCarburant) {
         this.typeCarburant = typeCarburant;
+    }
+
+    public Double getVitesseMoyenne() {
+        return vitesseMoyenne;
+    }
+
+    public void setVitesseMoyenne(Double vitesseMoyenne) {
+        this.vitesseMoyenne = vitesseMoyenne;
     }
 }
