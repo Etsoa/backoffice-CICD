@@ -66,8 +66,6 @@ INSERT INTO hotel (libelle) VALUES
 ('Ibis'),
 ('Lokanga');
 
--- Initialisation des réservations@ -35,13 +35,5 @@ INSERT INTO hotel (libelle) VALUES
-
 -- Initialisation des réservations
 INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 (4631, 11, '2026-02-05', '00:01', 3),
@@ -98,9 +96,9 @@ INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
 
 -- Initialisation des véhicules
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
-('VH-2026-001', 5, 'Es', 55.0),
-('VH-2026-002', 7, 'D', 60.0),
-('VH-2026-003', 5, 'El', 50.0),
-('VH-2026-004', 4, 'H', 58.0),
-('VH-2026-005', 12, 'D', 55.0),
+('VH-2026-001', 4, 'D', 60.00),
+('VH-2026-002', 8, 'D', 55.00),
+('VH-2026-003', 5, 'Es', 65.00),
+('VH-2026-004', 12, 'H', 50.00),
+('VH-2026-005', 3, 'El', 70.00);
 ('VH-2026-006', 18, 'D', 50.0);

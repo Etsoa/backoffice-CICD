@@ -7,395 +7,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planification des Véhicules</title>
+    <title>Planification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .date-selector {
-            background: #f8f9fa;
-            padding: 20px 30px;
-            border-bottom: 2px solid #e9ecef;
-        }
-        
-        .date-selector form {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .date-selector label {
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .date-selector input[type="date"] {
-            padding: 10px 15px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: all 0.3s;
-        }
-        
-        .date-selector input[type="date"]:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .date-selector button {
-            padding: 10px 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .date-selector button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        .content {
-            padding: 30px;
-        }
-        
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .info {
-            background: #d1ecf1;
-            color: #0c5460;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #bee5eb;
-        }
-        
-        .vehicule-card {
-            background: #fff;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-        
-        .vehicule-card:hover {
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transform: translateY(-3px);
-        }
-        
-        .vehicule-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .vehicule-info {
-            display: flex;
-            gap: 30px;
-            align-items: center;
-        }
-        
-        .vehicule-ref {
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-        
-        .vehicule-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 20px;
-            font-size: 0.9em;
-        }
-        
-        .reservations-list {
-            padding: 0;
-        }
-        
-        .reservation-item {
-            padding: 20px;
-            border-bottom: 1px solid #e9ecef;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            transition: background 0.2s;
-        }
-        
-        .reservation-item:last-child {
-            border-bottom: none;
-        }
-        
-        .reservation-item:hover {
-            background: #f8f9fa;
-        }
-        
-        .reservation-field {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .reservation-label {
-            font-size: 0.85em;
-            color: #6c757d;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .reservation-value {
-            font-size: 1.1em;
-            color: #212529;
-            font-weight: 500;
-        }
-        
-        .time-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            background: #e7f3ff;
-            color: #004085;
-            border-radius: 5px;
-            font-weight: 600;
-        }
-        
-        .retour-info {
-            background: #d4edda;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .retour-label {
-            font-weight: 600;
-            color: #155724;
-        }
-        
-        .retour-time {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #155724;
-        }
-        
-        .no-planning {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6c757d;
-        }
-        
-        .no-planning svg {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 20px;
-            opacity: 0.5;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background-color: #f0f4f8; min-height: 100vh; }
+
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; z-index: 100; }
+        .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; }
+        .sidebar-brand i { font-size: 24px; color: #1a73e8; }
+        .sidebar-brand span { font-size: 18px; font-weight: 700; color: #1e293b; }
+        .sidebar-nav { padding: 16px 12px; flex: 1; }
+        .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #64748b; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 4px; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #e8f0fe; color: #1a73e8; }
+        .sidebar-nav a i { width: 20px; text-align: center; font-size: 16px; }
+
+        .main { margin-left: 260px; padding: 32px 40px; }
+        .page-header { margin-bottom: 24px; }
+        .page-header h1 { font-size: 26px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+        .page-header p { color: #64748b; font-size: 14px; }
+
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; font-family: inherit; }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; }
+
+        .card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h3 { font-size: 15px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+        .card-header h3 i { color: #1a73e8; }
+        .card-body { padding: 20px; }
+
+        .date-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .date-form .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .date-form .form-group label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control { padding: 9px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
+        .form-control:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
+
+        .alert { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; font-weight: 500; }
+        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .alert-info { background: #e8f0fe; color: #1a73e8; border: 1px solid #bfdbfe; }
+
+        /* Vehicle section */
+        .vehicle-section { margin-bottom: 32px; }
+        .vehicle-header { background: #f8fafc; color: #334155; padding: 14px 24px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; border-bottom: none; }
+        .vehicle-header .vh-ref { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; color: #1e293b; }
+        .vehicle-header .vh-meta { display: flex; gap: 16px; font-size: 13px; font-weight: 500; color: #64748b; }
+        .vehicle-header .vh-count { font-size: 13px; color: #64748b; }
+
+        .planning-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-top: none; }
+        .planning-table thead th { padding: 10px 16px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
+        .planning-table tbody td { padding: 12px 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; font-weight: 500; }
+        .planning-table tbody tr:hover { background: #f8fafc; }
+        .planning-table tbody tr:last-child td { border-bottom: none; }
+
+        .td-time { font-variant-numeric: tabular-nums; font-weight: 600; color: #1e293b; }
+        .td-hotel { color: #1a73e8; font-weight: 600; }
+        .td-ref { color: #64748b; }
+
+        .retour-row { background: #f0fdf4; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .retour-row .retour-label { font-size: 13px; font-weight: 600; color: #166534; }
+        .retour-row .retour-time { font-size: 16px; font-weight: 700; color: #166534; }
+
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state i { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
+        .empty-state h2 { font-size: 20px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+        .empty-state p { color: #94a3b8; font-size: 14px; }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 20px; }
+            .planning-table { font-size: 12px; }
+            .planning-table thead th, .planning-table tbody td { padding: 8px 10px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚗 Planification des Véhicules</h1>
-            <p>Gestion optimale des transferts aéroport</p>
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-building"></i>
+            <span>BackOffice</span>
         </div>
-        
-        <div class="date-selector">
-            <form method="GET" action="${pageContext.request.contextPath}/planification">
-                <label for="date">Sélectionner une date :</label>
-                <input type="date" id="date" name="date" 
-                       value="${dateSelectionnee != null ? dateSelectionnee : ''}" 
-                       required>
-                <button type="submit">📅 Afficher le Planning</button>
-            </form>
+        <nav class="sidebar-nav">
+            <a href="${pageContext.request.contextPath}/">
+                <i class="fas fa-home"></i> Tableau de bord
+            </a>
+            <a href="${pageContext.request.contextPath}/reservations">
+                <i class="fas fa-calendar-check"></i> Reservations
+            </a>
+            <a href="${pageContext.request.contextPath}/vehicules">
+                <i class="fas fa-car"></i> Vehicules
+            </a>
+            <a href="${pageContext.request.contextPath}/hotels">
+                <i class="fas fa-hotel"></i> Hotels
+            </a>
+            <a href="${pageContext.request.contextPath}/planification" class="active">
+                <i class="fas fa-route"></i> Planification
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <h1>Planification</h1>
+            <p>Planning des vehicules pour les transferts</p>
         </div>
-        
-        <div class="content">
-            <% if (request.getAttribute("error") != null) { %>
-                <div class="error">
-                    ⚠️ <%= request.getAttribute("error") %>
-                </div>
-            <% } %>
-            
-            <% 
-            @SuppressWarnings("unchecked")
-            List<VehiculePlanningDTO> planning = (List<VehiculePlanningDTO>) request.getAttribute("planning");
-            
-            if (planning != null && !planning.isEmpty()) { 
-            %>
-                <div class="info">
-                    📊 Planning pour le <strong>${dateSelectionnee}</strong> - 
-                    <%= planning.size() %> véhicule(s) utilisé(s)
-                </div>
-                
-                <% for (VehiculePlanningDTO vehiculePlanning : planning) { %>
-                    <div class="vehicule-card">
-                        <div class="vehicule-header">
-                            <div class="vehicule-info">
-                                <span class="vehicule-ref">
-                                    <%= vehiculePlanning.getVehicule().getReference() %>
-                                </span>
-                                <span class="vehicule-badge">
-                                    <%= vehiculePlanning.getVehicule().getPlace() %> places
-                                </span>
-                                <span class="vehicule-badge">
-                                    <%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %>
-                                </span>
-                                <span class="vehicule-badge">
-                                    <%= String.format("%.0f", vehiculePlanning.getVehicule().getVitesseMoyenne()) %> km/h
-                                </span>
-                            </div>
-                            <div>
-                                <%= vehiculePlanning.getReservations().size() %> réservation(s)
-                            </div>
-                        </div>
-                        
-                        <div class="reservations-list">
-                            <% for (ReservationPlanningDTO resPlanning : vehiculePlanning.getReservations()) { %>
-                                <div class="reservation-item">
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Référence</span>
-                                        <span class="reservation-value">
-                                            #<%= resPlanning.getReservation().getReference() %>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Hôtel</span>
-                                        <span class="reservation-value">
-                                            <%= resPlanning.getHotelLibelle() %>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Personnes</span>
-                                        <span class="reservation-value">
-                                            <%= resPlanning.getReservation().getNombre() %> 
-                                            <%= resPlanning.getReservation().getNombre() > 1 ? "personnes" : "personne" %>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Heure RDV</span>
-                                        <span class="reservation-value">
-                                            <span class="time-badge">
-                                                <%= resPlanning.getReservation().getHeure() %>
-                                            </span>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Départ Aéroport</span>
-                                        <span class="reservation-value">
-                                            <span class="time-badge">
-                                                <%= resPlanning.getHeureDepart() %>
-                                            </span>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Retour prévu</span>
-                                        <span class="reservation-value">
-                                            <span class="time-badge">
-                                                <%= resPlanning.getHeureRetour() %>
-                                            </span>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Distance</span>
-                                        <span class="reservation-value">
-                                            <%= String.format("%.1f", resPlanning.getDistanceKm()) %> km
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="reservation-field">
-                                        <span class="reservation-label">Temps d'attente</span>
-                                        <span class="reservation-value">
-                                            <%= resPlanning.getTempsAttenteMin() %> min
-                                        </span>
-                                    </div>
-                                </div>
-                            <% } %>
-                        </div>
-                        
-                        <div class="retour-info">
-                            <span class="retour-label">
-                                ✅ Retour définitif à l'aéroport :
-                            </span>
-                            <span class="retour-time">
-                                <%= vehiculePlanning.getHeureRetourAeroport() %>
-                            </span>
-                        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-calendar-alt"></i> Selectionner une date</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="${pageContext.request.contextPath}/planification" class="date-form">
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" name="date" class="form-control"
+                               value="${dateSelectionnee != null ? dateSelectionnee : ''}" required>
                     </div>
-                <% } %>
-                
-            <% } else if (request.getAttribute("dateSelectionnee") != null) { %>
-                <div class="no-planning">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
-                    <h2>Aucune réservation</h2>
-                    <p>Aucune réservation trouvée pour la date sélectionnée.</p>
-                </div>
-            <% } else { %>
-                <div class="no-planning">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    <h2>Sélectionnez une date</h2>
-                    <p>Veuillez sélectionner une date pour afficher le planning des véhicules.</p>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Afficher
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <% if (request.getAttribute("error") != null) { %>
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <%= request.getAttribute("error") %>
+            </div>
+        <% } %>
+
+        <%
+        @SuppressWarnings("unchecked")
+        List<VehiculePlanningDTO> planning = (List<VehiculePlanningDTO>) request.getAttribute("planning");
+
+        if (planning != null && !planning.isEmpty()) {
+        %>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Planning du <strong>${dateSelectionnee}</strong> &mdash; <%= planning.size() %> vehicule(s) utilise(s)
+            </div>
+
+            <% for (VehiculePlanningDTO vehiculePlanning : planning) { %>
+                <div class="vehicle-section">
+                    <div class="vehicle-header">
+                        <span class="vh-ref"><%= vehiculePlanning.getVehicule().getReference() %></span>
+                        <div class="vh-meta">
+                            <span><%= vehiculePlanning.getVehicule().getPlace() %> places</span>
+                            <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
+                            <span><%= String.format("%.0f", vehiculePlanning.getVehicule().getVitesseMoyenne()) %> km/h</span>
+                        </div>
+                        <span class="vh-count"><%= vehiculePlanning.getReservations().size() %> reservation(s)</span>
+                    </div>
+
+                    <table class="planning-table">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Hotel</th>
+                                <th>Personnes</th>
+                                <th>Heure RDV</th>
+                                <th>Depart</th>
+                                <th>Retour prevu</th>
+                                <th>Distance</th>
+                                <th>Attente</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <% for (ReservationPlanningDTO resPlanning : vehiculePlanning.getReservations()) { %>
+                            <tr>
+                                <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
+                                <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
+                                <td><%= resPlanning.getReservation().getNombre() %></td>
+                                <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>
+                                <td class="td-time"><%= resPlanning.getHeureDepart() %></td>
+                                <td class="td-time"><%= resPlanning.getHeureRetour() %></td>
+                                <td><%= String.format("%.1f", resPlanning.getDistanceKm()) %> km</td>
+                                <td><%= resPlanning.getTempsAttenteMin() %> min</td>
+                            </tr>
+                        <% } %>
+                        </tbody>
+                    </table>
+
+                    <div class="retour-row">
+                        <span class="retour-label">Retour definitif a l'aeroport</span>
+                        <span class="retour-time"><%= vehiculePlanning.getHeureRetourAeroport() %></span>
+                    </div>
                 </div>
             <% } %>
-        </div>
-    </div>
+
+        <% } else if (request.getAttribute("dateSelectionnee") != null) { %>
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h2>Aucune reservation</h2>
+                <p>Aucune reservation trouvee pour la date selectionnee.</p>
+            </div>
+        <% } else { %>
+            <div class="empty-state">
+                <i class="fas fa-calendar-day"></i>
+                <h2>Selectionnez une date</h2>
+                <p>Veuillez selectionner une date pour afficher le planning des vehicules.</p>
+            </div>
+        <% } %>
+    </main>
 </body>
 </html>

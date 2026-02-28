@@ -1,53 +1,38 @@
 package com.backoffice.controller;
 
-import java.io.IOException;
 import java.sql.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import com.backoffice.dto.VehiculePlanningDTO;
 import com.backoffice.service.PlanificationService;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import itu.framework.annotations.MyController;
+import itu.framework.annotations.MyURL;
+import itu.framework.model.ModelView;
 
-@WebServlet("/planification")
-public class PlanificationController extends HttpServlet {
+@MyController(value = "Planification")
+public class PlanificationController {
 
-    private PlanificationService planificationService;
+    private PlanificationService planificationService = new PlanificationService();
 
-    @Override
-    public void init() throws ServletException {
-        super.init();
-        planificationService = new PlanificationService();
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    @MyURL(value = "/planification", method = "GET")
+    public ModelView afficherPlanning(HashMap<String, Object> params) {
+        ModelView mv = new ModelView("planification/index.jsp");
         
-        String dateParam = request.getParameter("date");
-        
-        if (dateParam != null && !dateParam.isEmpty()) {
+        if (params != null && params.get("date") != null && !params.get("date").toString().isEmpty()) {
+            String dateParam = params.get("date").toString();
             try {
                 Date date = Date.valueOf(dateParam);
                 List<VehiculePlanningDTO> planning = planificationService.genererPlanning(date);
                 
-                request.setAttribute("planning", planning);
-                request.setAttribute("dateSelectionnee", dateParam);
+                mv.addItem("planning", planning);
+                mv.addItem("dateSelectionnee", dateParam);
             } catch (IllegalArgumentException e) {
-                request.setAttribute("error", "Format de date invalide. Utilisez le format YYYY-MM-DD");
+                mv.addItem("error", "Format de date invalide. Utilisez le format YYYY-MM-DD");
             }
         }
         
-        request.getRequestDispatcher("/templates/planification/index.jsp").forward(request, response);
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        doGet(request, response);
+        return mv;
     }
 }
