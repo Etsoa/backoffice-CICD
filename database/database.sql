@@ -100,5 +100,5 @@ INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
 ('VH-2026-002', 8, 'D', 55.00),
 ('VH-2026-003', 5, 'Es', 65.00),
 ('VH-2026-004', 12, 'H', 50.00),
-('VH-2026-005', 3, 'El', 70.00);
+('VH-2026-005', 3, 'El', 70.00),
 ('VH-2026-006', 18, 'D', 50.0);

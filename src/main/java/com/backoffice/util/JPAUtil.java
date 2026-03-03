@@ -34,6 +34,8 @@ public class JPAUtil {
                 String cleanUrl = databaseUrl;
                 if (cleanUrl.startsWith("postgresql://")) {
                     cleanUrl = cleanUrl.substring("postgresql://".length());
+                } else if (cleanUrl.startsWith("postgres://")) {
+                    cleanUrl = cleanUrl.substring("postgres://".length());
                 }
                 // Format: user:pass@host:port/dbname
                 String userInfo = cleanUrl.substring(0, cleanUrl.indexOf("@"));
