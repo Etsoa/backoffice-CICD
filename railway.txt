@@ -1,0 +1,158 @@
+GUIDE DEPLOIEMENT RAILWAY
+JAVA (FRAMEWORK MAISON) + POSTGRESQL
+=====================================
+
+1) CONDITIONS IMPORTANTES
+--------------------------
+
+Ton framework maison doit :
+
+- Lancer un serveur HTTP
+- Ecouter sur un port dynamique
+- Utiliser les variables d'environnement
+- Se compiler en fichier JAR
+
+IMPORTANT :
+Railway fournit un port via variable d'environnement :
+
+PORT
+
+Tu dois l'utiliser dans ton code Java :
+
+String port = System.getenv("PORT");
+if (port == null) {
+    port = "8080";
+}
+
+Puis démarrer ton serveur sur ce port.
+
+
+------------------------------------------------------------
+
+2) STRUCTURE DU PROJET
+-----------------------
+
+Ton projet doit ressembler à :
+
+/project
+  ├── src/
+  ├── pom.xml  (si Maven)
+  ├── target/app.jar
+  └── Dockerfile
+
+
+------------------------------------------------------------
+
+3) CREER LE DOCKERFILE
+----------------------
+
+A la racine du projet, créer un fichier nommé :
+
+Dockerfile
+
+Contenu recommandé :
+
+FROM eclipse-temurin:22-jdk
+WORKDIR /app
+COPY target/app.jar app.jar
+CMD ["java", "-jar", "app.jar"]
+
+IMPORTANT :
+Avant de push, compiler ton projet :
+
+Si Maven :
+mvn clean package
+
+Le fichier JAR doit être dans :
+target/
+
+
+------------------------------------------------------------
+
+4) AJOUTER POSTGRESQL SUR RAILWAY
+----------------------------------
+
+Sur Railway :
+
+1. New Project
+2. Add Service
+3. Choisir PostgreSQL
+
+Railway va générer automatiquement :
+
+DATABASE_URL
+
+Tu dois récupérer cette variable dans ton code Java :
+
+String databaseUrl = System.getenv("DATABASE_URL");
+
+IMPORTANT :
+Ne jamais mettre user/password en dur dans le code.
+
+
+------------------------------------------------------------
+
+5) CONNEXION POSTGRES EN JAVA
+-----------------------------
+
+Si tu utilises JDBC :
+
+String databaseUrl = System.getenv("DATABASE_URL");
+Connection conn = DriverManager.getConnection(databaseUrl);
+
+Assure-toi que le driver PostgreSQL est dans ton pom.xml :
+
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <version>42.7.3</version>
+</dependency>
+
+
+------------------------------------------------------------
+
+6) DEPLOIEMENT
+--------------
+
+1. Push ton projet sur GitHub
+2. Aller sur Railway
+3. New Project
+4. Deploy from GitHub Repo
+5. Selectionner ton repository
+6. Railway build automatiquement avec Docker
+7. Attendre la fin du build
+8. Railway fournit une URL publique
+
+
+------------------------------------------------------------
+
+7) VERIFICATION
+---------------
+
+Après déploiement :
+
+- Aller dans Logs
+- Vérifier qu'il n'y a pas d'erreur
+- Vérifier que le serveur écoute bien sur le PORT fourni
+- Tester l'URL publique
+
+Si erreur de connexion DB :
+- Vérifier DATABASE_URL
+- Vérifier que le driver PostgreSQL est bien inclus
+- Vérifier que tu utilises System.getenv()
+
+
+------------------------------------------------------------
+
+RESUME SIMPLE
+-------------
+
+Toujours utiliser :
+- System.getenv("PORT")
+- System.getenv("DATABASE_URL")
+
+Toujours compiler avant de push
+Toujours utiliser Docker
+Ne jamais hardcoder les credentials
+
+FIN

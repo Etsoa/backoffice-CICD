@@ -31,5 +31,5 @@ Thumbs.db
 *.log
 
 # Config sensible
-src/main/resources/application.properties
-src/main/resources/app.properties
+# src/main/resources/application.properties
+# src/main/resources/app.properties
