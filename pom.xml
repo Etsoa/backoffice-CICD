@@ -82,6 +82,23 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
+            <!-- Exclure les classes projet du JAR (sauf Main) pour éviter le double classloader -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/backoffice/controller/**</exclude>
+                        <exclude>com/backoffice/models/**</exclude>
+                        <exclude>com/backoffice/util/**</exclude>
+                        <exclude>com/backoffice/filter/**</exclude>
+                        <exclude>META-INF/persistence.xml</exclude>
+                        <exclude>application.properties</exclude>
+                        <exclude>application.properties.example</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <!-- Plugin pour créer un JAR exécutable avec toutes les dépendances -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

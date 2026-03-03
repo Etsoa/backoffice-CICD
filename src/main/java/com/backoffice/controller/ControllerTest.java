@@ -7,11 +7,15 @@ package com.backoffice.controller;
 
 import itu.framework.annotations.MyController;
 import itu.framework.annotations.MyURL;
-// import itu.framework.model.JsonResponse;
 import itu.framework.model.ModelView;
 
 @MyController(value = "Test")
 public class ControllerTest {
+
+    @MyURL(value = "/", method = "GET")
+    public ModelView home() {
+        return new ModelView("index.jsp");
+    }
 
     @MyURL(value = "/admin", method = "GET")
     public ModelView showAdmin() {

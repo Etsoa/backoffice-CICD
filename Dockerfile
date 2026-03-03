@@ -27,11 +27,14 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Copier le JAR compilé
+# Copier le JAR compilé (contient Main.class + dépendances, PAS les classes projet)
 COPY --from=build /app/target/backoffice-CICD.jar app.jar
 
-# Copier les templates webapp (nécessaire pour Tomcat Embedded)
-COPY --from=build /app/src/main/webapp ./src/main/webapp
+# Copier les templates webapp (JSP, web.xml, etc.)
+COPY --from=build /app/src/main/webapp ./webapp
+
+# Copier les classes compilées du projet (contrôleurs, modèles, etc.)
+COPY --from=build /app/target/classes ./classes
 
 # Railway fournit PORT dynamiquement
 EXPOSE 8080
