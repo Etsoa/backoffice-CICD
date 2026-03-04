@@ -49,6 +49,7 @@ public class Token {
 
     /**
      * Vérifie si le token est expiré
+     * 
      * @return true si expiré, false sinon (null = jamais expiré)
      */
     public boolean isExpire() {

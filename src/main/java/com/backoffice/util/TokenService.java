@@ -11,6 +11,7 @@ public class TokenService {
 
     /**
      * Vérifie si un token est valide (existe et non expiré)
+     * 
      * @param valeurToken La valeur du token à vérifier
      * @return true si le token est valide, false sinon
      */
@@ -18,7 +19,7 @@ public class TokenService {
         if (valeurToken == null || valeurToken.trim().isEmpty()) {
             return false;
         }
-        
+
         EntityManager em = JPAUtil.getEntityManager();
         try {
             Token token = em.createQuery(
@@ -28,11 +29,11 @@ public class TokenService {
                     .getResultStream()
                     .findFirst()
                     .orElse(null);
-            
+
             if (token == null) {
                 return false;
             }
-            
+
             return token.isValide();
         } finally {
             em.close();
@@ -41,6 +42,7 @@ public class TokenService {
 
     /**
      * Récupère un token par sa valeur
+     * 
      * @param valeurToken La valeur du token
      * @return Le token ou null si non trouvé
      */
@@ -48,7 +50,7 @@ public class TokenService {
         if (valeurToken == null || valeurToken.trim().isEmpty()) {
             return null;
         }
-        
+
         EntityManager em = JPAUtil.getEntityManager();
         try {
             return em.createQuery(

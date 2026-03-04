@@ -33,3 +33,6 @@ Thumbs.db
 # Config sensible
 # src/main/resources/application.properties
 # src/main/resources/app.properties
+*.jar
+tomcat.8080/work/Tomcat/localhost/ROOT/org/apache/jsp/templates/reservations/list_jsp.java
+tomcat.8080/work/Tomcat/localhost/ROOT/org/apache/jsp/templates/index_jsp.java
