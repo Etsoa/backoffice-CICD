@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
 <%@ page import="com.backoffice.models.Vehicule" %>
-<%@ page import="com.backoffice.models.Vehicule.TypeCarburant" %>
+<%@ page import="com.backoffice.models.TypeCarburant" %>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -131,13 +131,14 @@
                             <select id="typeCarburant" name="typeCarburant" class="form-control">
                                 <option value="">-- Tous --</option>
                                 <%
-                                    TypeCarburant[] types = (TypeCarburant[]) request.getAttribute("typesCarburant");
+                                    @SuppressWarnings("unchecked")
+                                    List<TypeCarburant> types = (List<TypeCarburant>) request.getAttribute("typesCarburant");
                                     String filtreActuel = (String) request.getAttribute("typeCarburantFiltre");
                                     if (types != null) {
                                         for (TypeCarburant t : types) {
-                                            boolean selected = filtreActuel != null && filtreActuel.equals(t.name());
+                                            boolean selected = filtreActuel != null && filtreActuel.equals(String.valueOf(t.getId()));
                                 %>
-                                <option value="<%= t.name() %>" <%= selected ? "selected" : "" %>><%= t.getLibelle() %></option>
+                                <option value="<%= t.getId() %>" <%= selected ? "selected" : "" %>><%= t.getLibelle() %></option>
                                 <% }} %>
                             </select>
                         </div>
@@ -148,6 +149,41 @@
                 </form>
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-clock"></i> Disponibilite</h3>
+            </div>
+            <div class="card-body">
+                <form action="${pageContext.request.contextPath}/vehicules" method="GET">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="dispoDate">Date</label>
+                            <input type="date" id="dispoDate" name="dispoDate" class="form-control"
+                                   value="${dispoDate != null ? dispoDate : ''}" required>
+                        </div>
+                        <div class="filter-group">
+                            <label for="dispoHeure">Heure</label>
+                            <input type="time" id="dispoHeure" name="dispoHeure" class="form-control"
+                                   value="${dispoHeure != null ? dispoHeure : ''}" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-search"></i> Voir disponibilite
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <%
+            Boolean filtreDispoActif = (Boolean) request.getAttribute("filtreDispoActif");
+            if (filtreDispoActif != null && filtreDispoActif) {
+        %>
+            <div class="message" style="background:#e8f0fe; color:#1a73e8; border-color:#bfdbfe;">
+                <i class="fas fa-info-circle"></i>
+                Vehicules disponibles le <strong>${dispoDate}</strong> a <strong>${dispoHeure}</strong>
+            </div>
+        <% } %>
 
         <%
             List<Vehicule> vehicules = (List<Vehicule>) request.getAttribute("vehicules");
@@ -180,7 +216,7 @@
                         <td><%= v.getReference() %></td>
                         <td><%= v.getPlace() %></td>
                         <td>
-                            <span class="badge badge-<%= v.getTypeCarburant().name() %>">
+                            <span class="badge badge-<%= v.getTypeCarburant().getCode() %>">
                                 <i class="fas fa-gas-pump"></i> <%= v.getTypeCarburant().getLibelle() %>
                             </span>
                         </td>

@@ -42,6 +42,7 @@
         .btn-sm { padding: 6px 14px; font-size: 12px; }
 
         .message { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #e6f4ea; color: #1e7e34; border-radius: 8px; margin-bottom: 20px; font-size: 14px; font-weight: 500; border: 1px solid #b7dfbf; }
+        .message.error { background: #fdecea; color: #c62828; border-color: #f5c6cb; }
         .message i { font-size: 16px; }
 
         .card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
@@ -110,10 +111,13 @@
             </a>
         </div>
 
-        <% if (request.getAttribute("message") != null) { %>
-            <div class="message">
-                <i class="fas fa-check-circle"></i>
-                <%= request.getAttribute("message") %>
+        <% if (request.getAttribute("message") != null) { 
+            String msg = request.getAttribute("message").toString();
+            boolean isError = msg.startsWith("Erreur");
+        %>
+            <div class="message<%= isError ? " error" : "" %>">
+                <i class="fas fa-<%= isError ? "exclamation-circle" : "check-circle" %>"></i>
+                <%= msg %>
             </div>
         <% } %>
 

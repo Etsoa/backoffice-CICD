@@ -1,6 +1,7 @@
 package com.backoffice.dto;
 
 import java.sql.Time;
+
 import com.backoffice.models.Reservation;
 
 public class ReservationPlanningDTO {
@@ -10,6 +11,7 @@ public class ReservationPlanningDTO {
     private Time heureRetour;
     private Double distanceKm;
     private Integer tempsAttenteMin; // TA en minutes
+    private Integer lieuHotelId; // ID du lieu correspondant à l'hôtel
 
     public ReservationPlanningDTO() {
     }
@@ -70,5 +72,13 @@ public class ReservationPlanningDTO {
 
     public void setTempsAttenteMin(Integer tempsAttenteMin) {
         this.tempsAttenteMin = tempsAttenteMin;
+    }
+
+    public Integer getLieuHotelId() {
+        return lieuHotelId;
+    }
+
+    public void setLieuHotelId(Integer lieuHotelId) {
+        this.lieuHotelId = lieuHotelId;
     }
 }

@@ -1,5 +1,7 @@
 package com.backoffice.controller;
 
+import java.sql.Date;
+import java.sql.Time;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,11 +110,18 @@ public class ReservationController {
     }
 
     @MyURL(value = "/reservations", method = "POST")
-    public ModelView createReservation(Reservation reservation) {
+    public ModelView createReservation(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("reservations/list.jsp");
 
         try {
+            Reservation reservation = new Reservation();
+            reservation.setReference(Integer.parseInt(params.get("reference").toString()));
+            reservation.setNombre(Integer.parseInt(params.get("nombre").toString()));
+            reservation.setDate(Date.valueOf(params.get("date").toString()));
+            reservation.setHeure(Time.valueOf(params.get("heure").toString() + ":00"));
+            reservation.setHotel(Integer.parseInt(params.get("hotel").toString()));
+
             em.getTransaction().begin();
             em.persist(reservation);
             em.getTransaction().commit();
@@ -130,15 +139,27 @@ public class ReservationController {
     }
 
     @MyURL(value = "/reservations/update", method = "POST")
-    public ModelView updateReservation(Reservation reservation) {
+    public ModelView updateReservation(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("reservations/list.jsp");
 
         try {
-            em.getTransaction().begin();
-            em.merge(reservation);
-            em.getTransaction().commit();
-            mv.addItem("message", "Réservation mise à jour avec succès");
+            Integer id = Integer.parseInt(params.get("id").toString());
+            Reservation reservation = em.find(Reservation.class, id);
+            if (reservation != null) {
+                reservation.setReference(Integer.parseInt(params.get("reference").toString()));
+                reservation.setNombre(Integer.parseInt(params.get("nombre").toString()));
+                reservation.setDate(Date.valueOf(params.get("date").toString()));
+                reservation.setHeure(Time.valueOf(params.get("heure").toString() + ":00"));
+                reservation.setHotel(Integer.parseInt(params.get("hotel").toString()));
+
+                em.getTransaction().begin();
+                em.merge(reservation);
+                em.getTransaction().commit();
+                mv.addItem("message", "Réservation mise à jour avec succès");
+            } else {
+                mv.addItem("message", "Réservation non trouvée");
+            }
         } catch (Exception e) {
             if (em.getTransaction().isActive())
                 em.getTransaction().rollback();

@@ -3,13 +3,13 @@ package com.backoffice.service;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 import com.backoffice.dto.ReservationPlanningDTO;
 import com.backoffice.dto.VehiculePlanningDTO;
-import com.backoffice.models.Distance;
 import com.backoffice.models.Hotel;
+import com.backoffice.models.Parametre;
 import com.backoffice.models.Reservation;
 import com.backoffice.models.Vehicule;
 import com.backoffice.util.JPAUtil;
@@ -19,19 +19,37 @@ import jakarta.persistence.TypedQuery;
 
 public class PlanificationService {
 
-    private static final Integer TEMPS_ATTENTE_MIN = 30; // 30 minutes par défaut
-    private static final String CODE_AEROPORT = "TNR"; // Code de l'aéroport Ivato
+    private static final String CODE_AEROPORT = "TNR";
+
+    // =========================================================================
+    // Méthodes d'accès aux données
+    // =========================================================================
 
     /**
-     * Obtenir toutes les réservations pour une date donnée
+     * Récupérer le délai d'attente depuis la table parametre
+     */
+    public int getDelaiAttente() {
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
+            TypedQuery<Parametre> query = em.createQuery(
+                "SELECT p FROM Parametre p WHERE p.cle = :cle", Parametre.class);
+            query.setParameter("cle", "delai_attente");
+            List<Parametre> result = query.getResultList();
+            return result.isEmpty() ? 30 : result.get(0).getValeurInt();
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Récupérer les réservations d'une date, triées par heure croissante
      */
     public List<Reservation> getReservationsByDate(Date date) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             TypedQuery<Reservation> query = em.createQuery(
-                "SELECT r FROM Reservation r WHERE r.date = :date ORDER BY r.heure", 
-                Reservation.class
-            );
+                "SELECT r FROM Reservation r WHERE r.date = :date ORDER BY r.heure ASC",
+                Reservation.class);
             query.setParameter("date", date);
             return query.getResultList();
         } finally {
@@ -40,56 +58,26 @@ public class PlanificationService {
     }
 
     /**
-     * Obtenir tous les véhicules disponibles, triés par priorité (Diesel en premier)
+     * Récupérer tous les véhicules
      */
-    public List<Vehicule> getVehiculesDisponibles() {
+    public List<Vehicule> getAllVehicules() {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Vehicule> query = em.createQuery(
-                "SELECT v FROM Vehicule v ORDER BY " +
-                "CASE v.typeCarburant " +
-                "  WHEN 'D' THEN 1 " +
-                "  WHEN 'H' THEN 2 " +
-                "  WHEN 'Es' THEN 3 " +
-                "  WHEN 'El' THEN 4 " +
-                "END, v.place", 
-                Vehicule.class
-            );
-            return query.getResultList();
+            return em.createQuery("SELECT v FROM Vehicule v ORDER BY v.place ASC", Vehicule.class)
+                     .getResultList();
         } finally {
             em.close();
         }
     }
 
     /**
-     * Obtenir la distance entre deux lieux
-     */
-    public Double getDistance(Integer lieuDepartId, Integer lieuArriveeId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            TypedQuery<Distance> query = em.createQuery(
-                "SELECT d FROM Distance d WHERE d.lieuDepart.id = :depart AND d.lieuArrivee.id = :arrivee", 
-                Distance.class
-            );
-            query.setParameter("depart", lieuDepartId);
-            query.setParameter("arrivee", lieuArriveeId);
-            List<Distance> result = query.getResultList();
-            return result.isEmpty() ? 0.0 : result.get(0).getKm();
-        } finally {
-            em.close();
-        }
-    }
-
-    /**
-     * Obtenir l'ID de l'aéroport Ivato
+     * Récupérer l'ID du lieu aéroport (TNR)
      */
     public Integer getAeroportId() {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             TypedQuery<Integer> query = em.createQuery(
-                "SELECT l.id FROM Lieu l WHERE l.code = :code", 
-                Integer.class
-            );
+                "SELECT l.id FROM Lieu l WHERE l.code = :code", Integer.class);
             query.setParameter("code", CODE_AEROPORT);
             List<Integer> result = query.getResultList();
             return result.isEmpty() ? 1 : result.get(0);
@@ -99,189 +87,381 @@ public class PlanificationService {
     }
 
     /**
-     * Calculer le temps de trajet en minutes
+     * Récupérer l'ID du lieu correspondant à un hôtel (par libellé)
      */
-    public Integer calculerTempsTrajet(Double distanceKm, Double vitesseMoyenne) {
-        if (distanceKm == null || vitesseMoyenne == null || vitesseMoyenne == 0) {
-            return 0;
-        }
-        double heures = distanceKm / vitesseMoyenne;
-        return (int) Math.ceil(heures * 60);
-    }
-
-    /**
-     * Ajouter des minutes à une heure
-     */
-    public Time ajouterMinutes(Time heure, Integer minutes) {
-        if (heure == null || minutes == null) {
-            return heure;
-        }
-        long millis = heure.getTime() + (minutes * 60 * 1000L);
-        return new Time(millis);
-    }
-
-    /**
-     * Soustraire des minutes d'une heure
-     */
-    public Time soustraireMinutes(Time heure, Integer minutes) {
-        if (heure == null || minutes == null) {
-            return heure;
-        }
-        long millis = heure.getTime() - (minutes * 60 * 1000L);
-        return new Time(millis);
-    }
-
-    /**
-     * Trouver le meilleur véhicule pour une réservation
-     * Règle: choisir le véhicule avec le nombre de places le plus proche (supérieur ou égal)
-     * Priorité: Diesel > Hybride > Essence > Electrique
-     */
-    public Vehicule trouverMeilleurVehicule(Integer nombrePersonnes, List<Vehicule> vehiculesDisponibles) {
-        if (vehiculesDisponibles == null || vehiculesDisponibles.isEmpty()) {
-            return null;
-        }
-
-        // Filtrer les véhicules ayant assez de places
-        List<Vehicule> vehiculesCapables = new ArrayList<>();
-        for (Vehicule v : vehiculesDisponibles) {
-            if (v.getPlace() >= nombrePersonnes) {
-                vehiculesCapables.add(v);
-            }
-        }
-
-        if (vehiculesCapables.isEmpty()) {
-            return null;
-        }
-
-        // Trier par: 1) type de carburant (Diesel prioritaire), 2) nombre de places (le plus proche)
-        vehiculesCapables.sort(new Comparator<Vehicule>() {
-            @Override
-            public int compare(Vehicule v1, Vehicule v2) {
-                // Priorité du carburant
-                int priorite1 = getPrioriteCarburant(v1.getTypeCarburant());
-                int priorite2 = getPrioriteCarburant(v2.getTypeCarburant());
-                
-                if (priorite1 != priorite2) {
-                    return Integer.compare(priorite1, priorite2);
-                }
-                
-                // Si même priorité, choisir le plus petit nombre de places
-                return Integer.compare(v1.getPlace(), v2.getPlace());
-            }
-        });
-
-        return vehiculesCapables.get(0);
-    }
-
-    private int getPrioriteCarburant(Vehicule.TypeCarburant type) {
-        switch (type) {
-            case D:   return 1; // Diesel - priorité la plus haute
-            case H:   return 2; // Hybride
-            case Es:  return 3; // Essence
-            case El:  return 4; // Electrique
-            default:  return 5;
-        }
-    }
-
-    /**
-     * Générer le planning pour une date donnée
-     */
-    public List<VehiculePlanningDTO> genererPlanning(Date date) {
-        List<Reservation> reservations = getReservationsByDate(date);
-        List<Vehicule> vehiculesDisponibles = getVehiculesDisponibles();
-        List<VehiculePlanningDTO> planning = new ArrayList<>();
-        
-        Integer aeroportId = getAeroportId();
-        
-        // Grouper les réservations par véhicule optimal
-        for (Reservation reservation : reservations) {
-            Vehicule vehicule = trouverMeilleurVehicule(reservation.getNombre(), vehiculesDisponibles);
-            
-            if (vehicule == null) {
-                continue; // Pas de véhicule disponible pour cette réservation
-            }
-            
-            // Trouver ou créer le VehiculePlanningDTO
-            VehiculePlanningDTO vehiculePlanning = null;
-            for (VehiculePlanningDTO vp : planning) {
-                if (vp.getVehicule().getId().equals(vehicule.getId())) {
-                    vehiculePlanning = vp;
-                    break;
-                }
-            }
-            
-            if (vehiculePlanning == null) {
-                vehiculePlanning = new VehiculePlanningDTO(vehicule);
-                planning.add(vehiculePlanning);
-            }
-            
-            // Calculer les détails de la réservation
-            ReservationPlanningDTO resPlanning = creerReservationPlanning(
-                reservation, aeroportId, vehicule
-            );
-            
-            vehiculePlanning.addReservation(resPlanning);
-        }
-        
-        // Calculer l'heure de retour à l'aéroport pour chaque véhicule
-        for (VehiculePlanningDTO vp : planning) {
-            calculerHeureRetourAeroport(vp, aeroportId);
-        }
-        
-        return planning;
-    }
-
-    /**
-     * Créer un ReservationPlanningDTO avec tous les calculs
-     */
-    private ReservationPlanningDTO creerReservationPlanning(Reservation reservation, 
-                                                            Integer aeroportId, 
-                                                            Vehicule vehicule) {
+    public Integer getLieuIdByHotelId(Integer hotelId) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            Hotel hotel = em.find(Hotel.class, reservation.getHotel());
-            String hotelLibelle = hotel != null ? hotel.getLibelle() : "Inconnu";
-            
-            // Distance aéroport -> hôtel
-            Double distanceKm = getDistance(aeroportId, reservation.getHotel());
-            
-            // Temps de trajet en minutes
-            Integer tempsTrajetMin = calculerTempsTrajet(distanceKm, vehicule.getVitesseMoyenne());
-            
-            // Heure de départ = heure réservation - temps trajet - temps attente
-            Time heureDepart = soustraireMinutes(reservation.getHeure(), 
-                                                 tempsTrajetMin + TEMPS_ATTENTE_MIN);
-            
-            // Heure de retour = heure réservation + temps attente + temps trajet retour
-            Time heureRetour = ajouterMinutes(reservation.getHeure(), 
-                                              TEMPS_ATTENTE_MIN + tempsTrajetMin);
-            
-            return new ReservationPlanningDTO(
-                reservation, 
-                hotelLibelle, 
-                heureDepart, 
-                heureRetour, 
-                distanceKm, 
-                TEMPS_ATTENTE_MIN
-            );
+            Hotel hotel = em.find(Hotel.class, hotelId);
+            if (hotel == null) return null;
+
+            TypedQuery<Integer> query = em.createQuery(
+                "SELECT l.id FROM Lieu l WHERE LOWER(l.libelle) = LOWER(:libelle)", Integer.class);
+            query.setParameter("libelle", hotel.getLibelle());
+            List<Integer> result = query.getResultList();
+            return result.isEmpty() ? null : result.get(0);
         } finally {
             em.close();
         }
     }
 
     /**
-     * Calculer l'heure de retour du véhicule à l'aéroport
+     * Récupérer la distance entre deux lieux
      */
-    private void calculerHeureRetourAeroport(VehiculePlanningDTO vehiculePlanning, Integer aeroportId) {
-        if (vehiculePlanning.getReservations().isEmpty()) {
-            return;
+    public Double getDistance(Integer lieuDepartId, Integer lieuArriveeId) {
+        if (lieuDepartId == null || lieuArriveeId == null) return 0.0;
+        if (lieuDepartId.equals(lieuArriveeId)) return 0.0;
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
+            // Chercher dans les deux sens (la distance est symétrique)
+            TypedQuery<Double> query = em.createQuery(
+                "SELECT d.km FROM Distance d WHERE " +
+                "(d.lieuDepart.id = :a AND d.lieuArrivee.id = :b) OR " +
+                "(d.lieuDepart.id = :b AND d.lieuArrivee.id = :a)",
+                Double.class);
+            query.setParameter("a", lieuDepartId);
+            query.setParameter("b", lieuArriveeId);
+            List<Double> result = query.getResultList();
+            return result.isEmpty() ? 0.0 : result.get(0);
+        } finally {
+            em.close();
         }
-        
-        // La dernière réservation détermine l'heure de retour
-        List<ReservationPlanningDTO> reservations = vehiculePlanning.getReservations();
-        ReservationPlanningDTO derniereReservation = reservations.get(reservations.size() - 1);
-        
-        Time heureRetour = derniereReservation.getHeureRetour();
-        vehiculePlanning.setHeureRetourAeroport(heureRetour);
+    }
+
+    /**
+     * Récupérer le libellé d'un hôtel
+     */
+    public String getHotelLibelle(Integer hotelId) {
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
+            Hotel hotel = em.find(Hotel.class, hotelId);
+            return hotel != null ? hotel.getLibelle() : "Inconnu";
+        } finally {
+            em.close();
+        }
+    }
+
+    // =========================================================================
+    // Utilitaires de calcul
+    // =========================================================================
+
+    public int calculerTempsTrajetMinutes(double distanceKm, double vitesseKmh) {
+        if (vitesseKmh <= 0) return 0;
+        return (int) Math.ceil((distanceKm / vitesseKmh) * 60);
+    }
+
+    public Time ajouterMinutes(Time heure, int minutes) {
+        if (heure == null) return null;
+        return new Time(heure.getTime() + minutes * 60 * 1000L);
+    }
+
+    // =========================================================================
+    // Logique métier principale
+    // =========================================================================
+
+    /**
+     * Trouver le meilleur véhicule pour un nombre de personnes donné.
+     * Règle : places >= nombre, le plus proche. Si égalité, Diesel prioritaire. Si encore égalité, random.
+     */
+    public Vehicule trouverMeilleurVehicule(int nombrePersonnes, List<Vehicule> vehiculesDisponibles) {
+        List<Vehicule> candidats = new ArrayList<>();
+        for (Vehicule v : vehiculesDisponibles) {
+            if (v.getPlace() >= nombrePersonnes) {
+                candidats.add(v);
+            }
+        }
+        if (candidats.isEmpty()) return null;
+
+        // Trier par places (plus proche), puis carburant (Diesel prioritaire)
+        candidats.sort((v1, v2) -> {
+            int cmp = Integer.compare(v1.getPlace(), v2.getPlace());
+            if (cmp != 0) return cmp;
+            return Integer.compare(getPrioriteCarburant(v1), getPrioriteCarburant(v2));
+        });
+
+        // Si plusieurs avec même places et même priorité carburant -> random
+        int bestPlaces = candidats.get(0).getPlace();
+        int bestPrio = getPrioriteCarburant(candidats.get(0));
+        List<Vehicule> meilleurs = new ArrayList<>();
+        for (Vehicule v : candidats) {
+            if (v.getPlace() == bestPlaces && getPrioriteCarburant(v) == bestPrio) {
+                meilleurs.add(v);
+            }
+        }
+        if (meilleurs.size() > 1) {
+            return meilleurs.get(new Random().nextInt(meilleurs.size()));
+        }
+        return meilleurs.get(0);
+    }
+
+    private int getPrioriteCarburant(Vehicule v) {
+        String code = v.getTypeCarburant() != null ? v.getTypeCarburant().getCode() : "";
+        switch (code) {
+            case "D":  return 1;
+            case "H":  return 2;
+            case "Es": return 3;
+            case "El": return 4;
+            default:   return 5;
+        }
+    }
+
+    /**
+     * Générer le planning complet pour une date donnée
+     */
+    public List<VehiculePlanningDTO> genererPlanning(Date date) {
+        List<Reservation> reservations = getReservationsByDate(date);
+        if (reservations.isEmpty()) return new ArrayList<>();
+
+        List<Vehicule> tousVehicules = getAllVehicules();
+        int delaiAttente = getDelaiAttente();
+        Integer aeroportId = getAeroportId();
+
+        // Trier par heure ASC, puis nombre de personnes DESC (gros groupes d'abord dans même créneau)
+        reservations.sort((r1, r2) -> {
+            int cmp = r1.getHeure().compareTo(r2.getHeure());
+            if (cmp != 0) return cmp;
+            return Integer.compare(r2.getNombre(), r1.getNombre());
+        });
+
+        List<VehiculePlanningDTO> planning = new ArrayList<>();
+        boolean[] assignees = new boolean[reservations.size()];
+
+        for (int i = 0; i < reservations.size(); i++) {
+            if (assignees[i]) continue;
+
+            Reservation resaPrincipale = reservations.get(i);
+
+            // Fenêtre temporelle : heure_premiere_resa + delai_attente
+            Time limiteHeure = ajouterMinutes(resaPrincipale.getHeure(), delaiAttente);
+
+            // Collecter les autres réservations dans cette fenêtre (pas encore assignées)
+            List<Integer> autresIndices = new ArrayList<>();
+            for (int j = i + 1; j < reservations.size(); j++) {
+                if (!assignees[j] && reservations.get(j).getHeure().compareTo(limiteHeure) <= 0) {
+                    autresIndices.add(j);
+                }
+            }
+
+            // Chercher le meilleur véhicule pour la résa principale
+            List<Vehicule> vehiculesUtilises = getVehiculesUtilises(planning);
+            List<Vehicule> disponibles = new ArrayList<>();
+            for (Vehicule v : tousVehicules) {
+                if (!isVehiculeUtilise(vehiculesUtilises, v)) {
+                    disponibles.add(v);
+                }
+            }
+
+            Vehicule meilleur = trouverMeilleurVehicule(resaPrincipale.getNombre(), disponibles);
+            if (meilleur == null) {
+                meilleur = trouverMeilleurVehicule(resaPrincipale.getNombre(), tousVehicules);
+            }
+            if (meilleur == null) continue;
+
+            VehiculePlanningDTO vehiculePlanning = new VehiculePlanningDTO(meilleur);
+            planning.add(vehiculePlanning);
+            assignees[i] = true;
+            ajouterReservationAuPlanning(vehiculePlanning, resaPrincipale, aeroportId, delaiAttente);
+
+            // Si le véhicule a un SURPLUS de places, essayer d'y ajouter d'autres résas de la fenêtre
+            int placesRestantes = meilleur.getPlace() - resaPrincipale.getNombre();
+            if (placesRestantes > 0 && !autresIndices.isEmpty()) {
+                // Trier par nombre de personnes DESC pour remplir au mieux
+                autresIndices.sort((a, b) -> Integer.compare(reservations.get(b).getNombre(), reservations.get(a).getNombre()));
+
+                for (int idx : autresIndices) {
+                    if (assignees[idx]) continue;
+                    Reservation resa = reservations.get(idx);
+                    if (resa.getNombre() <= placesRestantes) {
+                        assignees[idx] = true;
+                        ajouterReservationAuPlanning(vehiculePlanning, resa, aeroportId, delaiAttente);
+                        placesRestantes -= resa.getNombre();
+                    }
+                }
+            }
+        }
+
+        // Calculer les itinéraires (ordre par proximité, distances, heures)
+        for (VehiculePlanningDTO vp : planning) {
+            calculerItineraire(vp, aeroportId, delaiAttente);
+        }
+
+        return planning;
+    }
+
+    /**
+     * Ajouter une réservation au planning d'un véhicule
+     */
+    private void ajouterReservationAuPlanning(VehiculePlanningDTO vehiculePlanning,
+                                               Reservation resa, Integer aeroportId, int delaiAttente) {
+        Integer lieuHotelId = getLieuIdByHotelId(resa.getHotel());
+        String hotelLibelle = getHotelLibelle(resa.getHotel());
+
+        ReservationPlanningDTO resaDTO = new ReservationPlanningDTO();
+        resaDTO.setReservation(resa);
+        resaDTO.setHotelLibelle(hotelLibelle);
+        resaDTO.setLieuHotelId(lieuHotelId);
+        resaDTO.setDistanceKm(getDistance(aeroportId, lieuHotelId));
+        resaDTO.setTempsAttenteMin(delaiAttente);
+
+        vehiculePlanning.addReservation(resaDTO);
+    }
+
+    /**
+     * Trouver un véhicule déjà planifié qui a assez de places restantes
+     * dans la même fenêtre temporelle
+     */
+    private VehiculePlanningDTO trouverVehiculePlanningAvecPlace(
+            List<VehiculePlanningDTO> planning, int nombrePersonnes,
+            Time heurePremierResa, int delaiAttente) {
+
+        Time limiteDepart = ajouterMinutes(heurePremierResa, delaiAttente);
+
+        for (VehiculePlanningDTO vp : planning) {
+            // Le véhicule doit être dans la même fenêtre temporelle
+            if (vp.getReservations().isEmpty()) continue;
+            Time heurePremiereDansVP = vp.getReservations().get(0).getReservation().getHeure();
+            Time limiteDepartVP = ajouterMinutes(heurePremiereDansVP, delaiAttente);
+
+            // Les fenêtres doivent se chevaucher
+            if (heurePremierResa.after(limiteDepartVP)) continue;
+
+            // Vérifier la capacité restante
+            int placesOccupees = 0;
+            for (ReservationPlanningDTO rp : vp.getReservations()) {
+                placesOccupees += rp.getReservation().getNombre();
+            }
+            int placesRestantes = vp.getVehicule().getPlace() - placesOccupees;
+            if (placesRestantes >= nombrePersonnes) {
+                return vp;
+            }
+        }
+        return null;
+    }
+
+    private List<Vehicule> getVehiculesUtilises(List<VehiculePlanningDTO> planning) {
+        List<Vehicule> result = new ArrayList<>();
+        for (VehiculePlanningDTO vp : planning) {
+            result.add(vp.getVehicule());
+        }
+        return result;
+    }
+
+    private boolean isVehiculeUtilise(List<Vehicule> utilises, Vehicule v) {
+        for (Vehicule u : utilises) {
+            if (u.getId().equals(v.getId())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Calculer l'itinéraire optimal pour un véhicule.
+     * Ordre des dépôts par proximité (nearest neighbor).
+     * Distance totale : TNR -> hotel1 -> hotel2 -> ... -> TNR
+     */
+    private void calculerItineraire(VehiculePlanningDTO vp, Integer aeroportId, int delaiAttente) {
+        List<ReservationPlanningDTO> reservations = vp.getReservations();
+        if (reservations.isEmpty()) return;
+
+        Vehicule vehicule = vp.getVehicule();
+        double vitesse = vehicule.getVitesseMoyenne();
+
+        // Trier les dépôts par proximité (nearest neighbor depuis TNR)
+        List<ReservationPlanningDTO> ordreDepot = new ArrayList<>();
+        List<ReservationPlanningDTO> restants = new ArrayList<>(reservations);
+        Integer posId = aeroportId;
+
+        while (!restants.isEmpty()) {
+            ReservationPlanningDTO plusProche = null;
+            double distMin = Double.MAX_VALUE;
+
+            for (ReservationPlanningDTO rp : restants) {
+                double dist = getDistance(posId, rp.getLieuHotelId());
+                if (dist < distMin) {
+                    distMin = dist;
+                    plusProche = rp;
+                }
+            }
+            if (plusProche == null) break;
+
+            ordreDepot.add(plusProche);
+            posId = plusProche.getLieuHotelId();
+            restants.remove(plusProche);
+        }
+
+        vp.setReservations(ordreDepot);
+
+        // Heure RDV la plus tôt
+        Time premierRdv = ordreDepot.get(0).getReservation().getHeure();
+        for (ReservationPlanningDTO rp : ordreDepot) {
+            if (rp.getReservation().getHeure().before(premierRdv)) {
+                premierRdv = rp.getReservation().getHeure();
+            }
+        }
+
+        // Heure de départ du véhicule = heure_premier_rdv - délai_attente
+        Time heureDepart = ajouterMinutes(premierRdv, -delaiAttente);
+        vp.setHeureDepart(heureDepart);
+
+        // Parcourir l'itinéraire
+        double distanceTotale = 0.0;
+        posId = aeroportId;
+        Time heureCourante = heureDepart;
+
+        for (ReservationPlanningDTO rp : ordreDepot) {
+            double distSegment = getDistance(posId, rp.getLieuHotelId());
+            int tempsSegmentMin = calculerTempsTrajetMinutes(distSegment, vitesse);
+            distanceTotale += distSegment;
+
+            rp.setHeureDepart(heureCourante);
+            Time heureArrivee = ajouterMinutes(heureCourante, tempsSegmentMin);
+            rp.setHeureRetour(heureArrivee);
+
+            heureCourante = heureArrivee;
+            posId = rp.getLieuHotelId();
+        }
+
+        // Retour TNR
+        double distRetour = getDistance(posId, aeroportId);
+        distanceTotale += distRetour;
+        int tempsRetourMin = calculerTempsTrajetMinutes(distRetour, vitesse);
+        Time heureRetourAeroport = ajouterMinutes(heureCourante, tempsRetourMin);
+
+        vp.setHeureRetourAeroport(heureRetourAeroport);
+        vp.setDistanceTotale(distanceTotale);
+    }
+
+    // =========================================================================
+    // Disponibilité des véhicules
+    // =========================================================================
+
+    /**
+     * Récupérer les véhicules disponibles à une date et heure données.
+     * Un véhicule est indisponible s'il est en course à cette heure
+     * (heureDepart <= heure < heureRetourAeroport).
+     */
+    public List<Vehicule> getVehiculesDisponibles(Date date, Time heure) {
+        List<Vehicule> tousVehicules = getAllVehicules();
+        List<VehiculePlanningDTO> planning = genererPlanning(date);
+
+        if (planning.isEmpty()) return tousVehicules;
+
+        // Trouver les véhicules occupés à cette heure
+        List<Integer> idsOccupes = new ArrayList<>();
+        for (VehiculePlanningDTO vp : planning) {
+            Time depart = vp.getHeureDepart();
+            Time retour = vp.getHeureRetourAeroport();
+            if (depart != null && retour != null
+                && !heure.before(depart) && heure.before(retour)) {
+                idsOccupes.add(vp.getVehicule().getId());
+            }
+        }
+
+        List<Vehicule> disponibles = new ArrayList<>();
+        for (Vehicule v : tousVehicules) {
+            if (!idsOccupes.contains(v.getId())) {
+                disponibles.add(v);
+            }
+        }
+        return disponibles;
     }
 }

@@ -1,11 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="com.backoffice.models.Vehicule" %>
-<%@ page import="com.backoffice.models.Vehicule.TypeCarburant" %>
+<%@ page import="com.backoffice.models.TypeCarburant" %>
+<%@ page import="java.util.List" %>
 <%
     Boolean editMode = (Boolean) request.getAttribute("editMode");
     boolean isEdit = editMode != null && editMode;
     Vehicule vehicule = (Vehicule) request.getAttribute("vehicule");
-    TypeCarburant[] typesCarburant = (TypeCarburant[]) request.getAttribute("typesCarburant");
+    @SuppressWarnings("unchecked")
+    List<TypeCarburant> typesCarburant = (List<TypeCarburant>) request.getAttribute("typesCarburant");
 %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -117,9 +119,10 @@
                             <option value="">-- Selectionner un type --</option>
                             <% if (typesCarburant != null) {
                                 for (TypeCarburant t : typesCarburant) {
-                                    boolean selected = isEdit && vehicule != null && vehicule.getTypeCarburant() == t;
+                                    boolean selected = isEdit && vehicule != null && vehicule.getTypeCarburant() != null 
+                                                       && vehicule.getTypeCarburant().getId().equals(t.getId());
                             %>
-                            <option value="<%= t.name() %>" <%= selected ? "selected" : "" %>><%= t.getLibelle() %></option>
+                            <option value="<%= t.getId() %>" <%= selected ? "selected" : "" %>><%= t.getLibelle() %></option>
                             <% }} %>
                         </select>
                     </div>

@@ -150,14 +150,21 @@
                 Planning du <strong>${dateSelectionnee}</strong> &mdash; <%= planning.size() %> vehicule(s) utilise(s)
             </div>
 
-            <% for (VehiculePlanningDTO vehiculePlanning : planning) { %>
+            <% for (VehiculePlanningDTO vehiculePlanning : planning) {
+                int totalPersonnes = 0;
+                for (ReservationPlanningDTO rp : vehiculePlanning.getReservations()) {
+                    totalPersonnes += rp.getReservation().getNombre();
+                }
+            %>
                 <div class="vehicle-section">
                     <div class="vehicle-header">
                         <span class="vh-ref"><%= vehiculePlanning.getVehicule().getReference() %></span>
                         <div class="vh-meta">
-                            <span><%= vehiculePlanning.getVehicule().getPlace() %> places</span>
+                            <span><%= vehiculePlanning.getVehicule().getPlace() %> places (<%= totalPersonnes %> occupees)</span>
                             <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
                             <span><%= String.format("%.0f", vehiculePlanning.getVehicule().getVitesseMoyenne()) %> km/h</span>
+                            <span><i class="fas fa-clock"></i> Depart : <%= vehiculePlanning.getHeureDepart() %></span>
+                            <span><i class="fas fa-road"></i> <%= vehiculePlanning.getDistanceTotale() != null ? String.format("%.1f", vehiculePlanning.getDistanceTotale()) : "0.0" %> km total</span>
                         </div>
                         <span class="vh-count"><%= vehiculePlanning.getReservations().size() %> reservation(s)</span>
                     </div>
@@ -165,19 +172,21 @@
                     <table class="planning-table">
                         <thead>
                             <tr>
+                                <th>Ordre</th>
                                 <th>Reference</th>
                                 <th>Hotel</th>
                                 <th>Personnes</th>
                                 <th>Heure RDV</th>
-                                <th>Depart</th>
-                                <th>Retour prevu</th>
-                                <th>Distance</th>
-                                <th>Attente</th>
+                                <th>Depart segment</th>
+                                <th>Arrivee hotel</th>
+                                <th>Distance (TNR)</th>
                             </tr>
                         </thead>
                         <tbody>
-                        <% for (ReservationPlanningDTO resPlanning : vehiculePlanning.getReservations()) { %>
+                        <% int ordre = 1;
+                        for (ReservationPlanningDTO resPlanning : vehiculePlanning.getReservations()) { %>
                             <tr>
+                                <td><%= ordre++ %></td>
                                 <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
                                 <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
                                 <td><%= resPlanning.getReservation().getNombre() %></td>
@@ -185,14 +194,13 @@
                                 <td class="td-time"><%= resPlanning.getHeureDepart() %></td>
                                 <td class="td-time"><%= resPlanning.getHeureRetour() %></td>
                                 <td><%= String.format("%.1f", resPlanning.getDistanceKm()) %> km</td>
-                                <td><%= resPlanning.getTempsAttenteMin() %> min</td>
                             </tr>
                         <% } %>
                         </tbody>
                     </table>
 
                     <div class="retour-row">
-                        <span class="retour-label">Retour definitif a l'aeroport</span>
+                        <span class="retour-label"><i class="fas fa-plane-arrival"></i> Retour a l'aeroport (TNR)</span>
                         <span class="retour-time"><%= vehiculePlanning.getHeureRetourAeroport() %></span>
                     </div>
                 </div>

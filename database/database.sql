@@ -26,13 +26,21 @@ CREATE TABLE reservation (
     FOREIGN KEY (hotel) REFERENCES hotel(id)
 );
 
+-- Table types de carburant
+CREATE TABLE type_carburant (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(10) NOT NULL UNIQUE,
+    libelle VARCHAR(50) NOT NULL
+);
+
 -- Table véhicules (Sprint 2)
 CREATE TABLE vehicule (
     id SERIAL PRIMARY KEY,
     reference VARCHAR(50) NOT NULL UNIQUE,
     place INT NOT NULL,
-    type_carburant VARCHAR(10) NOT NULL CHECK (type_carburant IN ('D', 'Es', 'H', 'El')),
-    vitesse_moyenne DECIMAL(5,2) NOT NULL DEFAULT 60.00 -- en km/h
+    type_carburant INT NOT NULL,
+    vitesse_moyenne DECIMAL(5,2) NOT NULL DEFAULT 60.00, -- en km/h
+    FOREIGN KEY (type_carburant) REFERENCES type_carburant(id)
 );
 
 -- Table lieux (Sprint 3 - Planification)
@@ -59,6 +67,14 @@ CREATE TABLE token (
     date_expiration TIMESTAMP NULL
 );
 
+-- Table paramètres (configuration)
+CREATE TABLE parametre (
+    id SERIAL PRIMARY KEY,
+    cle VARCHAR(50) NOT NULL UNIQUE,
+    valeur VARCHAR(100) NOT NULL,
+    description VARCHAR(255)
+);
+
 -- Initialisation des hôtels
 INSERT INTO hotel (libelle) VALUES
 ('Colbert'),
@@ -66,14 +82,25 @@ INSERT INTO hotel (libelle) VALUES
 ('Ibis'),
 ('Lokanga');
 
--- Initialisation des réservations
+-- Initialisation des réservations (données de test couvrant tous les scénarios)
 INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
-(4631, 11, '2026-02-05', '00:01', 3),
-(4394, 1, '2026-02-05', '23:55', 3),
-(8054, 2, '2026-02-09', '10:17', 1),
-(1432, 4, '2026-02-01', '15:25', 2),
-(7861, 4, '2026-01-28', '07:11', 1),
-(3308, 5, '2026-01-28', '07:45', 1);
+-- === Date 2026-01-28 : Fenêtre temporelle + groupement ===
+(1001, 4, '2026-01-28', '07:00', 1),   -- 4 pers, Colbert à 07:00
+(1002, 3, '2026-01-28', '07:20', 2),   -- 3 pers, Novotel à 07:20 (dans fenêtre 07:00+30min → groupement possible)
+(1003, 2, '2026-01-28', '07:45', 3),   -- 2 pers, Ibis à 07:45 (hors fenêtre → nouveau véhicule)
+(1004, 11, '2026-01-28', '15:00', 4),  -- 11 pers, Lokanga à 15:00 (gros véhicule nécessaire)
+
+-- === Date 2026-02-05 : Même heure + multi-hôtels + dépassement capacité ===
+(2001, 3, '2026-02-05', '10:00', 1),   -- 3 pers, Colbert à 10:00
+(2002, 1, '2026-02-05', '10:00', 4),   -- 1 pers, Lokanga à 10:00 (même heure, groupement avec 2001)
+(2003, 2, '2026-02-05', '10:15', 3),   -- 2 pers, Ibis à 10:15 (dans fenêtre, total cumulé 3+1+2=6)
+(2004, 4, '2026-02-05', '10:25', 2),   -- 4 pers, Novotel à 10:25 (dans fenêtre, 6+4=10 → dépasse → nouveau véhicule)
+(2005, 7, '2026-02-05', '18:30', 1),   -- 7 pers, Colbert à 18:30 (fenêtre isolée, véhicule 8 places Diesel)
+
+-- === Date 2026-02-09 : Véhicule seul + priorité Diesel + proximité ===
+(3001, 2, '2026-02-09', '08:30', 2),   -- 2 pers, Novotel à 08:30 (seul → petit véhicule)
+(3002, 5, '2026-02-09', '14:00', 1),   -- 5 pers, Colbert à 14:00
+(3003, 4, '2026-02-09', '14:10', 3);   -- 4 pers, Ibis à 14:10 (dans fenêtre, 5+4=9 → dépasse 5 places → nouveau véhicule)
 
 -- Initialisation des lieux
 INSERT INTO lieu (code, libelle) VALUES
@@ -83,22 +110,35 @@ INSERT INTO lieu (code, libelle) VALUES
 ('IBL', 'Ibis'),
 ('LOK', 'Lokanga');
 
--- Initialisation des distances (de l'aéroport vers les hôtels)
+-- Initialisation des distances (une seule direction par paire, la distance est symétrique)
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-(1, 2, 18.5),  -- Ivato -> Colbert
-(1, 3, 16.2),  -- Ivato -> Novotel
-(1, 4, 17.8),  -- Ivato -> Ibis
-(1, 5, 19.3),  -- Ivato -> Lokanga
-(2, 1, 18.5),  -- Colbert -> Ivato
-(3, 1, 16.2),  -- Novotel -> Ivato
-(4, 1, 17.8),  -- Ibis -> Ivato
-(5, 1, 19.3);  -- Lokanga -> Ivato
+(1, 2, 18.5),  -- Ivato <-> Colbert
+(1, 3, 16.2),  -- Ivato <-> Novotel
+(1, 4, 17.8),  -- Ivato <-> Ibis
+(1, 5, 19.3),  -- Ivato <-> Lokanga
+(2, 3, 3.5),   -- Colbert <-> Novotel
+(2, 4, 2.8),   -- Colbert <-> Ibis
+(2, 5, 4.0),   -- Colbert <-> Lokanga
+(3, 4, 2.0),   -- Novotel <-> Ibis
+(3, 5, 5.2),   -- Novotel <-> Lokanga
+(4, 5, 3.6);   -- Ibis <-> Lokanga
+
+-- Initialisation des types de carburant
+INSERT INTO type_carburant (code, libelle) VALUES
+('D', 'Diesel'),
+('Es', 'Essence'),
+('H', 'Hybride'),
+('El', 'Electrique');
 
 -- Initialisation des véhicules
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
-('VH-2026-001', 4, 'D', 60.00),
-('VH-2026-002', 8, 'D', 55.00),
-('VH-2026-003', 5, 'Es', 65.00),
-('VH-2026-004', 12, 'H', 50.00),
-('VH-2026-005', 3, 'El', 70.00),
-('VH-2026-006', 18, 'D', 50.0);
+('VH-2026-001', 4, 1, 60.00),
+('VH-2026-002', 8, 1, 55.00),
+('VH-2026-003', 5, 2, 65.00),
+('VH-2026-004', 12, 3, 50.00),
+('VH-2026-005', 3, 4, 70.00),
+('VH-2026-006', 18, 1, 50.0);
+
+-- Initialisation des paramètres
+INSERT INTO parametre (cle, valeur, description) VALUES
+('delai_attente', '30', 'Délai d''attente en minutes avant le départ du véhicule');
