@@ -12,6 +12,7 @@
         <class>com.backoffice.models.Hotel</class>
         <class>com.backoffice.models.Reservation</class>
         <class>com.backoffice.models.Vehicule</class>
+        <class>com.backoffice.models.TypeCarburant</class>
         <class>com.backoffice.models.Token</class>
         <class>com.backoffice.models.Lieu</class>
         <class>com.backoffice.models.Distance</class>

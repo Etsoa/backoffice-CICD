@@ -5,8 +5,8 @@ import java.sql.Time;
 import java.util.HashMap;
 import java.util.List;
 
+import com.backoffice.models.TypeCarburant;
 import com.backoffice.models.Vehicule;
-import com.backoffice.models.Vehicule.TypeCarburant;
 import com.backoffice.service.PlanificationService;
 import com.backoffice.util.JPAUtil;
 
@@ -51,19 +51,19 @@ public class VehiculeController {
             }
             // Filtre par type de carburant
             else if (params != null && params.get("typeCarburant") != null && !params.get("typeCarburant").toString().isEmpty()) {
-                String type = params.get("typeCarburant").toString();
+                Integer typeId = Integer.parseInt(params.get("typeCarburant").toString());
                 vehicules = em.createQuery(
-                        "SELECT v FROM Vehicule v WHERE v.typeCarburant = :type ORDER BY v.reference",
+                        "SELECT v FROM Vehicule v WHERE v.typeCarburant.id = :typeId ORDER BY v.reference",
                         Vehicule.class)
-                        .setParameter("type", TypeCarburant.valueOf(type))
+                        .setParameter("typeId", typeId)
                         .getResultList();
-                mv.addItem("typeCarburantFiltre", type);
+                mv.addItem("typeCarburantFiltre", params.get("typeCarburant").toString());
             } else {
                 vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
             }
             
             mv.addItem("vehicules", vehicules);
-            mv.addItem("typesCarburant", TypeCarburant.values());
+            mv.addItem("typesCarburant", getTypesCarburant(em));
             mv.addItem("filtreDispoActif", filtreDispoActif);
         } finally {
             em.close();
@@ -74,8 +74,13 @@ public class VehiculeController {
 
     @MyURL(value = "/vehicules/new", method = "GET")
     public ModelView showCreateForm() {
+        EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("vehicules/form.jsp");
-        mv.addItem("typesCarburant", TypeCarburant.values());
+        try {
+            mv.addItem("typesCarburant", getTypesCarburant(em));
+        } finally {
+            em.close();
+        }
         return mv;
     }
 
@@ -87,7 +92,7 @@ public class VehiculeController {
             Integer id = Integer.parseInt(params.get("id").toString());
             Vehicule vehicule = em.find(Vehicule.class, id);
             mv.addItem("vehicule", vehicule);
-            mv.addItem("typesCarburant", TypeCarburant.values());
+            mv.addItem("typesCarburant", getTypesCarburant(em));
             mv.addItem("editMode", true);
         } finally {
             em.close();
@@ -96,11 +101,20 @@ public class VehiculeController {
     }
 
     @MyURL(value = "/vehicules", method = "POST")
-    public ModelView createVehicule(Vehicule vehicule) {
+    public ModelView createVehicule(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("vehicules/list.jsp");
 
         try {
+            Vehicule vehicule = new Vehicule();
+            vehicule.setReference(params.get("reference").toString());
+            vehicule.setPlace(Integer.parseInt(params.get("place").toString()));
+            vehicule.setVitesseMoyenne(Double.parseDouble(params.get("vitesseMoyenne").toString()));
+
+            Integer typeId = Integer.parseInt(params.get("typeCarburant").toString());
+            TypeCarburant type = em.find(TypeCarburant.class, typeId);
+            vehicule.setTypeCarburant(type);
+
             em.getTransaction().begin();
             em.persist(vehicule);
             em.getTransaction().commit();
@@ -117,11 +131,22 @@ public class VehiculeController {
     }
 
     @MyURL(value = "/vehicules/update", method = "POST")
-    public ModelView updateVehicule(Vehicule vehicule) {
+    public ModelView updateVehicule(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("vehicules/list.jsp");
 
         try {
+            Integer id = Integer.parseInt(params.get("id").toString());
+            Vehicule vehicule = em.find(Vehicule.class, id);
+
+            vehicule.setReference(params.get("reference").toString());
+            vehicule.setPlace(Integer.parseInt(params.get("place").toString()));
+            vehicule.setVitesseMoyenne(Double.parseDouble(params.get("vitesseMoyenne").toString()));
+
+            Integer typeId = Integer.parseInt(params.get("typeCarburant").toString());
+            TypeCarburant type = em.find(TypeCarburant.class, typeId);
+            vehicule.setTypeCarburant(type);
+
             em.getTransaction().begin();
             em.merge(vehicule);
             em.getTransaction().commit();
@@ -169,11 +194,15 @@ public class VehiculeController {
         try {
             List<Vehicule> vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
             mv.addItem("vehicules", vehicules);
-            mv.addItem("typesCarburant", TypeCarburant.values());
+            mv.addItem("typesCarburant", getTypesCarburant(em));
         } finally {
             em.close();
         }
         return mv;
+    }
+
+    private List<TypeCarburant> getTypesCarburant(EntityManager em) {
+        return em.createQuery("SELECT t FROM TypeCarburant t ORDER BY t.id", TypeCarburant.class).getResultList();
     }
 
     // API JSON

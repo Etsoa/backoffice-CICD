@@ -2,33 +2,16 @@ package com.backoffice.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "vehicule")
 public class Vehicule {
-
-    public enum TypeCarburant {
-        D("Diesel"),
-        Es("Essence"),
-        H("Hybride"),
-        El("Electrique");
-
-        private final String libelle;
-
-        TypeCarburant(String libelle) {
-            this.libelle = libelle;
-        }
-
-        public String getLibelle() {
-            return libelle;
-        }
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,30 +24,14 @@ public class Vehicule {
     @Column(name = "place", nullable = false)
     private Integer place;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type_carburant", nullable = false, length = 10)
+    @ManyToOne
+    @JoinColumn(name = "type_carburant", nullable = false)
     private TypeCarburant typeCarburant;
 
     @Column(name = "vitesse_moyenne", nullable = false)
     private Double vitesseMoyenne; // en km/h
 
     public Vehicule() {
-    }
-
-    public Vehicule(Integer id, String reference, Integer place, TypeCarburant typeCarburant) {
-        this.id = id;
-        this.reference = reference;
-        this.place = place;
-        this.typeCarburant = typeCarburant;
-        this.vitesseMoyenne = 60.0; // Valeur par défaut
-    }
-
-    public Vehicule(Integer id, String reference, Integer place, TypeCarburant typeCarburant, Double vitesseMoyenne) {
-        this.id = id;
-        this.reference = reference;
-        this.place = place;
-        this.typeCarburant = typeCarburant;
-        this.vitesseMoyenne = vitesseMoyenne;
     }
 
     public Integer getId() {

@@ -195,12 +195,13 @@ public class PlanificationService {
     }
 
     private int getPrioriteCarburant(Vehicule v) {
-        switch (v.getTypeCarburant()) {
-            case D:  return 1;
-            case H:  return 2;
-            case Es: return 3;
-            case El: return 4;
-            default: return 5;
+        String code = v.getTypeCarburant() != null ? v.getTypeCarburant().getCode() : "";
+        switch (code) {
+            case "D":  return 1;
+            case "H":  return 2;
+            case "Es": return 3;
+            case "El": return 4;
+            default:   return 5;
         }
     }
 
@@ -233,61 +234,49 @@ public class PlanificationService {
             // Fenêtre temporelle : heure_premiere_resa + delai_attente
             Time limiteHeure = ajouterMinutes(resaPrincipale.getHeure(), delaiAttente);
 
-            // Collecter les réservations dans cette fenêtre (pas encore assignées)
-            List<Integer> indicesFenetre = new ArrayList<>();
-            indicesFenetre.add(i);
+            // Collecter les autres réservations dans cette fenêtre (pas encore assignées)
+            List<Integer> autresIndices = new ArrayList<>();
             for (int j = i + 1; j < reservations.size(); j++) {
                 if (!assignees[j] && reservations.get(j).getHeure().compareTo(limiteHeure) <= 0) {
-                    indicesFenetre.add(j);
+                    autresIndices.add(j);
                 }
             }
 
-            // Trier par nombre de personnes DESC pour attribuer les gros groupes d'abord
-            indicesFenetre.sort((a, b) -> Integer.compare(reservations.get(b).getNombre(), reservations.get(a).getNombre()));
-
-            for (int idx : indicesFenetre) {
-                if (assignees[idx]) continue;
-
-                Reservation resa = reservations.get(idx);
-
-                // Chercher un véhicule déjà dans le planning avec assez de places restantes
-                VehiculePlanningDTO vehiculePlanning = trouverVehiculePlanningAvecPlace(
-                    planning, resa.getNombre(), resaPrincipale.getHeure(), delaiAttente);
-
-                if (vehiculePlanning == null) {
-                    // Chercher un nouveau véhicule (non encore utilisé)
-                    List<Vehicule> vehiculesUtilises = getVehiculesUtilises(planning);
-                    List<Vehicule> disponibles = new ArrayList<>();
-                    for (Vehicule v : tousVehicules) {
-                        if (!isVehiculeUtilise(vehiculesUtilises, v)) {
-                            disponibles.add(v);
-                        }
-                    }
-
-                    Vehicule meilleur = trouverMeilleurVehicule(resa.getNombre(), disponibles);
-                    if (meilleur == null) {
-                        meilleur = trouverMeilleurVehicule(resa.getNombre(), tousVehicules);
-                    }
-                    if (meilleur == null) continue;
-
-                    vehiculePlanning = new VehiculePlanningDTO(meilleur);
-                    planning.add(vehiculePlanning);
+            // Chercher le meilleur véhicule pour la résa principale
+            List<Vehicule> vehiculesUtilises = getVehiculesUtilises(planning);
+            List<Vehicule> disponibles = new ArrayList<>();
+            for (Vehicule v : tousVehicules) {
+                if (!isVehiculeUtilise(vehiculesUtilises, v)) {
+                    disponibles.add(v);
                 }
+            }
 
-                assignees[idx] = true;
+            Vehicule meilleur = trouverMeilleurVehicule(resaPrincipale.getNombre(), disponibles);
+            if (meilleur == null) {
+                meilleur = trouverMeilleurVehicule(resaPrincipale.getNombre(), tousVehicules);
+            }
+            if (meilleur == null) continue;
 
-                // Créer le DTO
-                Integer lieuHotelId = getLieuIdByHotelId(resa.getHotel());
-                String hotelLibelle = getHotelLibelle(resa.getHotel());
+            VehiculePlanningDTO vehiculePlanning = new VehiculePlanningDTO(meilleur);
+            planning.add(vehiculePlanning);
+            assignees[i] = true;
+            ajouterReservationAuPlanning(vehiculePlanning, resaPrincipale, aeroportId, delaiAttente);
 
-                ReservationPlanningDTO resaDTO = new ReservationPlanningDTO();
-                resaDTO.setReservation(resa);
-                resaDTO.setHotelLibelle(hotelLibelle);
-                resaDTO.setLieuHotelId(lieuHotelId);
-                resaDTO.setDistanceKm(getDistance(aeroportId, lieuHotelId));
-                resaDTO.setTempsAttenteMin(delaiAttente);
+            // Si le véhicule a un SURPLUS de places, essayer d'y ajouter d'autres résas de la fenêtre
+            int placesRestantes = meilleur.getPlace() - resaPrincipale.getNombre();
+            if (placesRestantes > 0 && !autresIndices.isEmpty()) {
+                // Trier par nombre de personnes DESC pour remplir au mieux
+                autresIndices.sort((a, b) -> Integer.compare(reservations.get(b).getNombre(), reservations.get(a).getNombre()));
 
-                vehiculePlanning.addReservation(resaDTO);
+                for (int idx : autresIndices) {
+                    if (assignees[idx]) continue;
+                    Reservation resa = reservations.get(idx);
+                    if (resa.getNombre() <= placesRestantes) {
+                        assignees[idx] = true;
+                        ajouterReservationAuPlanning(vehiculePlanning, resa, aeroportId, delaiAttente);
+                        placesRestantes -= resa.getNombre();
+                    }
+                }
             }
         }
 
@@ -297,6 +286,24 @@ public class PlanificationService {
         }
 
         return planning;
+    }
+
+    /**
+     * Ajouter une réservation au planning d'un véhicule
+     */
+    private void ajouterReservationAuPlanning(VehiculePlanningDTO vehiculePlanning,
+                                               Reservation resa, Integer aeroportId, int delaiAttente) {
+        Integer lieuHotelId = getLieuIdByHotelId(resa.getHotel());
+        String hotelLibelle = getHotelLibelle(resa.getHotel());
+
+        ReservationPlanningDTO resaDTO = new ReservationPlanningDTO();
+        resaDTO.setReservation(resa);
+        resaDTO.setHotelLibelle(hotelLibelle);
+        resaDTO.setLieuHotelId(lieuHotelId);
+        resaDTO.setDistanceKm(getDistance(aeroportId, lieuHotelId));
+        resaDTO.setTempsAttenteMin(delaiAttente);
+
+        vehiculePlanning.addReservation(resaDTO);
     }
 
     /**

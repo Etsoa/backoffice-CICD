@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
 <%@ page import="com.backoffice.models.Vehicule" %>
-<%@ page import="com.backoffice.models.Vehicule.TypeCarburant" %>
+<%@ page import="com.backoffice.models.TypeCarburant" %>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -131,13 +131,14 @@
                             <select id="typeCarburant" name="typeCarburant" class="form-control">
                                 <option value="">-- Tous --</option>
                                 <%
-                                    TypeCarburant[] types = (TypeCarburant[]) request.getAttribute("typesCarburant");
+                                    @SuppressWarnings("unchecked")
+                                    List<TypeCarburant> types = (List<TypeCarburant>) request.getAttribute("typesCarburant");
                                     String filtreActuel = (String) request.getAttribute("typeCarburantFiltre");
                                     if (types != null) {
                                         for (TypeCarburant t : types) {
-                                            boolean selected = filtreActuel != null && filtreActuel.equals(t.name());
+                                            boolean selected = filtreActuel != null && filtreActuel.equals(String.valueOf(t.getId()));
                                 %>
-                                <option value="<%= t.name() %>" <%= selected ? "selected" : "" %>><%= t.getLibelle() %></option>
+                                <option value="<%= t.getId() %>" <%= selected ? "selected" : "" %>><%= t.getLibelle() %></option>
                                 <% }} %>
                             </select>
                         </div>
@@ -215,7 +216,7 @@
                         <td><%= v.getReference() %></td>
                         <td><%= v.getPlace() %></td>
                         <td>
-                            <span class="badge badge-<%= v.getTypeCarburant().name() %>">
+                            <span class="badge badge-<%= v.getTypeCarburant().getCode() %>">
                                 <i class="fas fa-gas-pump"></i> <%= v.getTypeCarburant().getLibelle() %>
                             </span>
                         </td>
