@@ -379,6 +379,13 @@ public class PlanificationService {
                 if (dist < distMin) {
                     distMin = dist;
                     plusProche = rp;
+                } else if (dist == distMin && plusProche != null) {
+                    // À distance égale, choisir l'hôtel dont le nom vient en premier alphabétiquement
+                    String libelleActuel = plusProche.getHotelLibelle() != null ? plusProche.getHotelLibelle() : "";
+                    String libelleCandidat = rp.getHotelLibelle() != null ? rp.getHotelLibelle() : "";
+                    if (libelleCandidat.compareToIgnoreCase(libelleActuel) < 0) {
+                        plusProche = rp;
+                    }
                 }
             }
             if (plusProche == null) break;
@@ -390,7 +397,7 @@ public class PlanificationService {
 
         vp.setReservations(ordreDepot);
 
-        // Heure RDV la plus tôt
+        // Heure RDV la plus tôt (premier client à l'aéroport)
         Time premierRdv = ordreDepot.get(0).getReservation().getHeure();
         for (ReservationPlanningDTO rp : ordreDepot) {
             if (rp.getReservation().getHeure().before(premierRdv)) {
@@ -398,11 +405,19 @@ public class PlanificationService {
             }
         }
 
-        // Heure de départ du véhicule = heure_premier_rdv - délai_attente
-        Time heureDepart = ajouterMinutes(premierRdv, -delaiAttente);
+        // Heure RDV la plus tardive (dernier client à l'aéroport)
+        Time dernierRdv = ordreDepot.get(0).getReservation().getHeure();
+        for (ReservationPlanningDTO rp : ordreDepot) {
+            if (rp.getReservation().getHeure().after(dernierRdv)) {
+                dernierRdv = rp.getReservation().getHeure();
+            }
+        }
+
+        // Le véhicule part de l'aéroport APRÈS le dernier RDV + délai d'attente (chargement)
+        Time heureDepart = ajouterMinutes(dernierRdv, delaiAttente);
         vp.setHeureDepart(heureDepart);
 
-        // Parcourir l'itinéraire
+        // Parcourir l'itinéraire : aéroport -> hôtel1 -> hôtel2 -> ... -> aéroport
         double distanceTotale = 0.0;
         posId = aeroportId;
         Time heureCourante = heureDepart;
@@ -412,10 +427,14 @@ public class PlanificationService {
             int tempsSegmentMin = calculerTempsTrajetMinutes(distSegment, vitesse);
             distanceTotale += distSegment;
 
+            // Départ du segment (depuis position courante vers cet hôtel)
             rp.setHeureDepart(heureCourante);
+
+            // Arrivée à l'hôtel = départ + temps de trajet
             Time heureArrivee = ajouterMinutes(heureCourante, tempsSegmentMin);
             rp.setHeureRetour(heureArrivee);
 
+            // Le prochain segment part de cet hôtel (après dépôt des clients)
             heureCourante = heureArrivee;
             posId = rp.getLieuHotelId();
         }
