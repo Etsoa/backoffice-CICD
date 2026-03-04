@@ -32,7 +32,7 @@ public class ReservationController {
             String dateFiltre = null;
             String dateDebut = null;
             String dateFin = null;
-            
+
             // Filtre par plage de dates
             if (params != null && params.get("dateDebut") != null && !params.get("dateDebut").toString().isEmpty()
                     && params.get("dateFin") != null && !params.get("dateFin").toString().isEmpty()) {
@@ -48,7 +48,8 @@ public class ReservationController {
                 mv.addItem("dateFin", dateFin);
             }
             // Filtre par date unique
-            else if (params != null && params.get("dateFiltre") != null && !params.get("dateFiltre").toString().isEmpty()) {
+            else if (params != null && params.get("dateFiltre") != null
+                    && !params.get("dateFiltre").toString().isEmpty()) {
                 dateFiltre = params.get("dateFiltre").toString();
                 TypedQuery<Reservation> query = em.createQuery(
                         "SELECT r FROM Reservation r WHERE r.date = :dateFiltre ORDER BY r.heure ASC",
@@ -57,14 +58,16 @@ public class ReservationController {
                 reservations = query.getResultList();
                 mv.addItem("dateFiltre", dateFiltre);
             } else {
-                reservations = em.createQuery("SELECT r FROM Reservation r ORDER BY r.date DESC, r.heure ASC", Reservation.class).getResultList();
+                reservations = em
+                        .createQuery("SELECT r FROM Reservation r ORDER BY r.date DESC, r.heure ASC", Reservation.class)
+                        .getResultList();
             }
-            
+
             // Charger les hôtels pour afficher les noms
             List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h", Hotel.class).getResultList();
             Map<Integer, String> hotelMap = hotels.stream()
                     .collect(Collectors.toMap(Hotel::getId, Hotel::getLibelle));
-            
+
             mv.addItem("reservations", reservations);
             mv.addItem("hotelMap", hotelMap);
         } finally {
@@ -79,14 +82,15 @@ public class ReservationController {
         EntityManager em = JPAUtil.getEntityManager();
         ModelView mv = new ModelView("reservations/form.jsp");
         try {
-            List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h ORDER BY h.libelle", Hotel.class).getResultList();
+            List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h ORDER BY h.libelle", Hotel.class)
+                    .getResultList();
             mv.addItem("hotels", hotels);
         } finally {
             em.close();
         }
         return mv;
     }
-    
+
     @MyURL(value = "/reservations/edit", method = "GET")
     public ModelView showEditForm(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
@@ -94,7 +98,8 @@ public class ReservationController {
         try {
             Integer id = Integer.parseInt(params.get("id").toString());
             Reservation reservation = em.find(Reservation.class, id);
-            List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h ORDER BY h.libelle", Hotel.class).getResultList();
+            List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h ORDER BY h.libelle", Hotel.class)
+                    .getResultList();
             mv.addItem("reservation", reservation);
             mv.addItem("hotels", hotels);
             mv.addItem("editMode", true);
@@ -128,11 +133,11 @@ public class ReservationController {
         } finally {
             em.close();
         }
-        
+
         // Recharger la liste avec les hôtels
         return reloadListWithHotels(mv);
     }
-    
+
     @MyURL(value = "/reservations/update", method = "POST")
     public ModelView updateReservation(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
@@ -162,10 +167,10 @@ public class ReservationController {
         } finally {
             em.close();
         }
-        
+
         return reloadListWithHotels(mv);
     }
-    
+
     @MyURL(value = "/reservations/delete", method = "GET")
     public ModelView deleteReservation(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
@@ -189,14 +194,16 @@ public class ReservationController {
         } finally {
             em.close();
         }
-        
+
         return reloadListWithHotels(mv);
     }
-    
+
     private ModelView reloadListWithHotels(ModelView mv) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            List<Reservation> reservations = em.createQuery("SELECT r FROM Reservation r ORDER BY r.date DESC, r.heure ASC", Reservation.class).getResultList();
+            List<Reservation> reservations = em
+                    .createQuery("SELECT r FROM Reservation r ORDER BY r.date DESC, r.heure ASC", Reservation.class)
+                    .getResultList();
             List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h", Hotel.class).getResultList();
             Map<Integer, String> hotelMap = hotels.stream()
                     .collect(Collectors.toMap(Hotel::getId, Hotel::getLibelle));
@@ -224,12 +231,13 @@ public class ReservationController {
             } else {
                 reservations = em.createQuery("SELECT r FROM Reservation r", Reservation.class).getResultList();
             }
-            
-            // Convertir les Reservation en ReservationDTO pour une meilleure sérialisation JSON
+
+            // Convertir les Reservation en ReservationDTO pour une meilleure sérialisation
+            // JSON
             List<ReservationDTO> reservationDTOs = reservations.stream()
                     .map(ReservationDTO::new)
                     .collect(Collectors.toList());
-            
+
             return JsonResponse.success(reservationDTOs, "Liste des réservations");
         } catch (Exception e) {
             return JsonResponse.error(500, e.getMessage());

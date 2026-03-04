@@ -27,8 +27,7 @@ public class VehiculeController {
         ModelView mv = new ModelView("vehicules/list.jsp");
 
         try {
-            List<Vehicule> vehicules;
-            
+            List<Vehicule> vehicules;            
             // Filtre par disponibilité (date + heure)
             boolean filtreDispoActif = false;
             if (params != null && params.get("dispoDate") != null && !params.get("dispoDate").toString().isEmpty()
@@ -59,9 +58,10 @@ public class VehiculeController {
                         .getResultList();
                 mv.addItem("typeCarburantFiltre", params.get("typeCarburant").toString());
             } else {
-                vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
+                vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class)
+                        .getResultList();
             }
-            
+
             mv.addItem("vehicules", vehicules);
             mv.addItem("typesCarburant", getTypesCarburant(em));
             mv.addItem("filtreDispoActif", filtreDispoActif);
@@ -192,7 +192,8 @@ public class VehiculeController {
     private ModelView reloadList(ModelView mv) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            List<Vehicule> vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
+            List<Vehicule> vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class)
+                    .getResultList();
             mv.addItem("vehicules", vehicules);
             mv.addItem("typesCarburant", getTypesCarburant(em));
         } finally {
@@ -210,7 +211,8 @@ public class VehiculeController {
     public JsonResponse apiListVehicules() {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            List<Vehicule> vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
+            List<Vehicule> vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class)
+                    .getResultList();
             return JsonResponse.success(vehicules, "Liste des véhicules");
         } catch (Exception e) {
             return JsonResponse.error(500, e.getMessage());
