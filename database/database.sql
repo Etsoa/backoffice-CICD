@@ -59,6 +59,14 @@ CREATE TABLE token (
     date_expiration TIMESTAMP NULL
 );
 
+-- Table paramètres (configuration)
+CREATE TABLE parametre (
+    id SERIAL PRIMARY KEY,
+    cle VARCHAR(50) NOT NULL UNIQUE,
+    valeur VARCHAR(100) NOT NULL,
+    description VARCHAR(255)
+);
+
 -- Initialisation des hôtels
 INSERT INTO hotel (libelle) VALUES
 ('Colbert'),
@@ -69,7 +77,7 @@ INSERT INTO hotel (libelle) VALUES
 -- Initialisation des réservations
 INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 (4631, 11, '2026-02-05', '00:01', 3),
-(4394, 1, '2026-02-05', '23:55', 3),
+(4394, 1, '2026-02-05', '00:01', 3),
 (8054, 2, '2026-02-09', '10:17', 1),
 (1432, 4, '2026-02-01', '15:25', 2),
 (7861, 4, '2026-01-28', '07:11', 1),
@@ -83,16 +91,18 @@ INSERT INTO lieu (code, libelle) VALUES
 ('IBL', 'Ibis'),
 ('LOK', 'Lokanga');
 
--- Initialisation des distances (de l'aéroport vers les hôtels)
+-- Initialisation des distances (une seule direction par paire, la distance est symétrique)
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-(1, 2, 18.5),  -- Ivato -> Colbert
-(1, 3, 16.2),  -- Ivato -> Novotel
-(1, 4, 17.8),  -- Ivato -> Ibis
-(1, 5, 19.3),  -- Ivato -> Lokanga
-(2, 1, 18.5),  -- Colbert -> Ivato
-(3, 1, 16.2),  -- Novotel -> Ivato
-(4, 1, 17.8),  -- Ibis -> Ivato
-(5, 1, 19.3);  -- Lokanga -> Ivato
+(1, 2, 18.5),  -- Ivato <-> Colbert
+(1, 3, 16.2),  -- Ivato <-> Novotel
+(1, 4, 17.8),  -- Ivato <-> Ibis
+(1, 5, 19.3),  -- Ivato <-> Lokanga
+(2, 3, 3.5),   -- Colbert <-> Novotel
+(2, 4, 2.8),   -- Colbert <-> Ibis
+(2, 5, 4.0),   -- Colbert <-> Lokanga
+(3, 4, 2.0),   -- Novotel <-> Ibis
+(3, 5, 5.2),   -- Novotel <-> Lokanga
+(4, 5, 3.6);   -- Ibis <-> Lokanga
 
 -- Initialisation des véhicules
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
@@ -102,3 +112,7 @@ INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
 ('VH-2026-004', 12, 'H', 50.00),
 ('VH-2026-005', 3, 'El', 70.00),
 ('VH-2026-006', 18, 'D', 50.0);
+
+-- Initialisation des paramètres
+INSERT INTO parametre (cle, valeur, description) VALUES
+('delai_attente', '30', 'Délai d''attente en minutes avant le départ du véhicule');

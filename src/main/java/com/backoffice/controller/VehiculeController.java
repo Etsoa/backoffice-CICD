@@ -1,10 +1,13 @@
 package com.backoffice.controller;
 
+import java.sql.Date;
+import java.sql.Time;
 import java.util.HashMap;
 import java.util.List;
 
 import com.backoffice.models.Vehicule;
 import com.backoffice.models.Vehicule.TypeCarburant;
+import com.backoffice.service.PlanificationService;
 import com.backoffice.util.JPAUtil;
 
 import itu.framework.annotations.MyController;
@@ -16,6 +19,8 @@ import jakarta.persistence.EntityManager;
 @MyController(value = "Vehicule")
 public class VehiculeController {
 
+    private PlanificationService planificationService = new PlanificationService();
+
     @MyURL(value = "/vehicules", method = "GET")
     public ModelView listVehicules(HashMap<String, Object> params) {
         EntityManager em = JPAUtil.getEntityManager();
@@ -24,8 +29,28 @@ public class VehiculeController {
         try {
             List<Vehicule> vehicules;
             
+            // Filtre par disponibilité (date + heure)
+            boolean filtreDispoActif = false;
+            if (params != null && params.get("dispoDate") != null && !params.get("dispoDate").toString().isEmpty()
+                && params.get("dispoHeure") != null && !params.get("dispoHeure").toString().isEmpty()) {
+                try {
+                    Date date = Date.valueOf(params.get("dispoDate").toString());
+                    String heureStr = params.get("dispoHeure").toString();
+                    if (!heureStr.contains(":")) heureStr += ":00";
+                    if (heureStr.split(":").length == 2) heureStr += ":00";
+                    Time heure = Time.valueOf(heureStr);
+                    
+                    vehicules = planificationService.getVehiculesDisponibles(date, heure);
+                    mv.addItem("dispoDate", params.get("dispoDate").toString());
+                    mv.addItem("dispoHeure", params.get("dispoHeure").toString());
+                    filtreDispoActif = true;
+                } catch (Exception e) {
+                    vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
+                    mv.addItem("message", "Erreur: Format date/heure invalide");
+                }
+            }
             // Filtre par type de carburant
-            if (params != null && params.get("typeCarburant") != null && !params.get("typeCarburant").toString().isEmpty()) {
+            else if (params != null && params.get("typeCarburant") != null && !params.get("typeCarburant").toString().isEmpty()) {
                 String type = params.get("typeCarburant").toString();
                 vehicules = em.createQuery(
                         "SELECT v FROM Vehicule v WHERE v.typeCarburant = :type ORDER BY v.reference",
@@ -39,6 +64,7 @@ public class VehiculeController {
             
             mv.addItem("vehicules", vehicules);
             mv.addItem("typesCarburant", TypeCarburant.values());
+            mv.addItem("filtreDispoActif", filtreDispoActif);
         } finally {
             em.close();
         }

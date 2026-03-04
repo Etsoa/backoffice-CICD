@@ -149,6 +149,41 @@
             </div>
         </div>
 
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-clock"></i> Disponibilite</h3>
+            </div>
+            <div class="card-body">
+                <form action="${pageContext.request.contextPath}/vehicules" method="GET">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="dispoDate">Date</label>
+                            <input type="date" id="dispoDate" name="dispoDate" class="form-control"
+                                   value="${dispoDate != null ? dispoDate : ''}" required>
+                        </div>
+                        <div class="filter-group">
+                            <label for="dispoHeure">Heure</label>
+                            <input type="time" id="dispoHeure" name="dispoHeure" class="form-control"
+                                   value="${dispoHeure != null ? dispoHeure : ''}" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-search"></i> Voir disponibilite
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <%
+            Boolean filtreDispoActif = (Boolean) request.getAttribute("filtreDispoActif");
+            if (filtreDispoActif != null && filtreDispoActif) {
+        %>
+            <div class="message" style="background:#e8f0fe; color:#1a73e8; border-color:#bfdbfe;">
+                <i class="fas fa-info-circle"></i>
+                Vehicules disponibles le <strong>${dispoDate}</strong> a <strong>${dispoHeure}</strong>
+            </div>
+        <% } %>
+
         <%
             List<Vehicule> vehicules = (List<Vehicule>) request.getAttribute("vehicules");
         %>
