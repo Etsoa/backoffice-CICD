@@ -4,6 +4,61 @@
 
 Ce système implémente une solution complète de planification des transferts aéroport-hôtel avec optimisation automatique des véhicules.
 
+## Sprint 5 - Gestion du temps d'attente et regroupement des réservations
+
+### 1. Regroupement des réservations par intervalle
+
+Les réservations sont traitées par **intervalle de temps** :
+- Si une réservation existe à une heure donnée (ex: 7h35)
+- Toutes les réservations dans cet intervalle + le délai d'attente configuré seront regroupées
+- Elles sont traitées ensemble comme un seul groupe
+
+**Exemple** : Vol à 7h35, délai = 30 minutes
+- Les réservations entre 7h35 et 8h05 → **Groupe 1**
+- Les réservations après 8h05 → **Groupe 2** (nouveau groupe avec le même principe)
+
+### 2. Table de configuration (configuration_attente)
+
+```sql
+CREATE TABLE configuration_attente (
+    id SERIAL PRIMARY KEY,
+    temps_attente_minutes INT NOT NULL DEFAULT 30,
+    description VARCHAR(255),
+    actif BOOLEAN NOT NULL DEFAULT TRUE
+);
+```
+
+Cette table permet de modifier facilement le délai de regroupement sans toucher au code.
+
+### 3. Départ synchronisé des véhicules
+
+Tous les véhicules transportant les clients d'un même groupe :
+- **Partent au même moment**
+- **L'heure de départ = heure de la DERNIÈRE réservation du groupe** (pas la fin de l'intervalle)
+
+**Exemple** : 
+- Réservation A à 7h35, Réservation B à 7h50, délai = 30 min
+- Intervalle : 7h35 - 8h05
+- Les deux sont dans l'intervalle → même groupe
+- Heure de départ : **7h50** (heure de la dernière réservation)
+
+### 4. Priorité d'attribution des véhicules
+
+L'ordre de priorité pour l'attribution est :
+1. **Diesel** (priorité maximale)
+2. **Essence** (deuxième priorité)
+3. **Autres** (Hybride, Électrique, etc.) - sélection aléatoire
+
+### 5. Jeu de données de test
+
+Voir le fichier `database/sprint5_test_data.sql` pour des scénarios de test couvrant :
+- Regroupement par intervalle
+- Priorité carburant (Diesel > Essence)
+- Dépassement de capacité avec regroupement
+- Fenêtres temporelles successives
+
+---
+
 ## Nouvelles Fonctionnalités
 
 ### 1. Modèle de Données
@@ -33,9 +88,10 @@ Le système respecte les règles suivantes pour l'affectation des véhicules:
    - Sélection du véhicule avec le nombre de places le plus proche pour éviter le gaspillage
    - Les clients ne sont jamais séparés
 
-2. **Priorité Diesel**:
-   - Ordre de priorité: Diesel > Hybride > Essence > Électrique
+2. **Priorité Diesel** (Sprint 5 - Mise à jour):
+   - Ordre de priorité: **Diesel > Essence > Autres (Random)**
    - À capacité égale, les véhicules diesel sont toujours privilégiés
+   - Si plusieurs véhicules avec même priorité, sélection aléatoire
 
 3. **Temps d'attente (TA)**:
    - Temps d'attente standard: **30 minutes**

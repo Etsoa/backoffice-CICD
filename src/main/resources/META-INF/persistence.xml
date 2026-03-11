@@ -17,6 +17,7 @@
         <class>com.backoffice.models.Lieu</class>
         <class>com.backoffice.models.Distance</class>
         <class>com.backoffice.models.Parametre</class>
+        <class>com.backoffice.models.ConfigurationAttente</class>
 
         <!-- Les propriétés sont injectées dynamiquement depuis application.properties via JPAUtil -->
     </persistence-unit>

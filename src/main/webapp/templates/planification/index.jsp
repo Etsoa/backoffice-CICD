@@ -1,7 +1,9 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.List" %>
+<%@ page import="com.backoffice.dto.RegroupementDTO" %>
 <%@ page import="com.backoffice.dto.VehiculePlanningDTO" %>
 <%@ page import="com.backoffice.dto.ReservationPlanningDTO" %>
+<%@ page import="com.backoffice.models.Reservation" %>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -49,26 +51,35 @@
         .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .alert-info { background: #e8f0fe; color: #1a73e8; border: 1px solid #bfdbfe; }
 
-        /* Vehicle section */
-        .vehicle-section { margin-bottom: 32px; }
-        .vehicle-header { background: #f8fafc; color: #334155; padding: 14px 24px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; border-bottom: none; }
-        .vehicle-header .vh-ref { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; color: #1e293b; }
-        .vehicle-header .vh-meta { display: flex; gap: 16px; font-size: 13px; font-weight: 500; color: #64748b; }
-        .vehicle-header .vh-count { font-size: 13px; color: #64748b; }
+        /* Groupe section - style simple */
+        .groupe-section { margin-bottom: 32px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .groupe-header { background: #f8fafc; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .groupe-header .groupe-title { font-size: 16px; font-weight: 700; color: #1e293b; }
+        .groupe-header .groupe-info { display: flex; gap: 16px; font-size: 13px; color: #64748b; }
+        .groupe-header .groupe-depart { background: #16a34a; color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+        
+        .groupe-content { padding: 16px 24px; }
 
-        .planning-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-top: none; }
-        .planning-table thead th { padding: 10px 16px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
-        .planning-table tbody td { padding: 12px 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; font-weight: 500; }
-        .planning-table tbody tr:hover { background: #f8fafc; }
+        /* Vehicle section */
+        .vehicle-section { margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+        .vehicle-section:last-child { margin-bottom: 0; }
+        .vehicle-header { background: #f8fafc; color: #334155; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #e2e8f0; }
+        .vehicle-header .vh-ref { font-size: 15px; font-weight: 700; color: #1e293b; }
+        .vehicle-header .vh-meta { display: flex; gap: 14px; font-size: 12px; color: #64748b; flex-wrap: wrap; }
+        .vehicle-header .vh-count { font-size: 12px; color: #64748b; }
+
+        .planning-table { width: 100%; border-collapse: collapse; background: #fff; }
+        .planning-table thead th { padding: 10px 16px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .planning-table tbody td { padding: 10px 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; }
         .planning-table tbody tr:last-child td { border-bottom: none; }
 
         .td-time { font-variant-numeric: tabular-nums; font-weight: 600; color: #1e293b; }
         .td-hotel { color: #1a73e8; font-weight: 600; }
         .td-ref { color: #64748b; }
 
-        .retour-row { background: #f0fdf4; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .retour-row .retour-label { font-size: 13px; font-weight: 600; color: #166534; }
-        .retour-row .retour-time { font-size: 16px; font-weight: 700; color: #166534; }
+        .retour-row { background: #f0fdf4; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .retour-row .retour-label { font-size: 12px; font-weight: 600; color: #166534; }
+        .retour-row .retour-time { font-size: 14px; font-weight: 700; color: #166534; }
 
         .empty-state { text-align: center; padding: 60px 20px; }
         .empty-state i { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
@@ -78,8 +89,6 @@
         @media (max-width: 768px) {
             .sidebar { display: none; }
             .main { margin-left: 0; padding: 20px; }
-            .planning-table { font-size: 12px; }
-            .planning-table thead th, .planning-table tbody td { padding: 8px 10px; }
         }
     </style>
 </head>
@@ -111,7 +120,7 @@
     <main class="main">
         <div class="page-header">
             <h1>Planification</h1>
-            <p>Planning des vehicules pour les transferts</p>
+            <p>Planning des vehicules pour les transferts - Regroupement par intervalle</p>
         </div>
 
         <div class="card">
@@ -133,6 +142,10 @@
                            class="btn btn-primary" style="background:#16a34a; margin-left:8px;">
                             <i class="fas fa-car"></i> Véhicules non assignés
                         </a>
+                        <a href="${pageContext.request.contextPath}/planification/reservations-non-assignees?date=${dateSelectionnee}"
+                           class="btn btn-primary" style="background:#dc2626; margin-left:8px;">
+                            <i class="fas fa-exclamation-circle"></i> Réservations non assignées
+                        </a>
                     <% } %>
                 </form>
             </div>
@@ -147,68 +160,101 @@
 
         <%
         @SuppressWarnings("unchecked")
-        List<VehiculePlanningDTO> planning = (List<VehiculePlanningDTO>) request.getAttribute("planning");
+        List<Reservation> nonAssignees = (List<Reservation>) request.getAttribute("reservationsNonAssignees");
+        if (nonAssignees != null && !nonAssignees.isEmpty()) {
+        %>
+            <div class="alert alert-error" style="background: #fef2f2; border-left: 4px solid #dc2626; color: #991b1b;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong><%= nonAssignees.size() %></strong> réservation(s) n'ont pas pu être assignées.
+                <a href="${pageContext.request.contextPath}/planification/reservations-non-assignees?date=${dateSelectionnee}"
+                   style="margin-left: 10px; color: #dc2626; font-weight: bold;">
+                    Voir détails →
+                </a>
+            </div>
+        <% } %>
 
-        if (planning != null && !planning.isEmpty()) {
+        <%
+        @SuppressWarnings("unchecked")
+        List<RegroupementDTO> regroupements = (List<RegroupementDTO>) request.getAttribute("regroupements");
+        Integer totalVehicules = (Integer) request.getAttribute("totalVehicules");
+        Integer delaiAttente = (Integer) request.getAttribute("delaiAttente");
+
+        if (regroupements != null && !regroupements.isEmpty()) {
         %>
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
-                Planning du <strong>${dateSelectionnee}</strong> &mdash; <%= planning.size() %> vehicule(s) utilise(s)
+                Planning du <strong>${dateSelectionnee}</strong> &mdash; 
+                <strong><%= regroupements.size() %></strong> groupe(s) | 
+                <strong><%= totalVehicules %></strong> véhicule(s)
+                <span style="margin-left: 16px; font-size: 12px; opacity: 0.8;">
+                    <i class="fas fa-clock"></i> Délai d'attente : <%= delaiAttente != null ? delaiAttente : 30 %> min
+                </span>
             </div>
 
-            <% for (VehiculePlanningDTO vehiculePlanning : planning) {
-                int totalPersonnes = 0;
-                for (ReservationPlanningDTO rp : vehiculePlanning.getReservations()) {
-                    totalPersonnes += rp.getReservation().getNombre();
-                }
-            %>
-                <div class="vehicle-section">
-                    <div class="vehicle-header">
-                        <span class="vh-ref"><%= vehiculePlanning.getVehicule().getReference() %></span>
-                        <div class="vh-meta">
-                            <span><%= vehiculePlanning.getVehicule().getPlace() %> places (<%= totalPersonnes %> occupees)</span>
-                            <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
-                            <span><i class="fas fa-map-signs"></i> <%= vehiculePlanning.getDestinationString() %></span>
-                            <span><%= String.format("%.0f", vehiculePlanning.getVehicule().getVitesseMoyenne()) %> km/h</span>
-                            <span><i class="fas fa-clock"></i> Depart : <%= vehiculePlanning.getHeureDepart() %></span>
-                            <span><i class="fas fa-road"></i> <%= vehiculePlanning.getDistanceTotale() != null ? String.format("%.1f", vehiculePlanning.getDistanceTotale()) : "0.0" %> km total</span>
+            <% for (RegroupementDTO groupe : regroupements) { %>
+                <div class="groupe-section">
+                    <div class="groupe-header">
+                        <span class="groupe-title">Groupe <%= groupe.getNumeroGroupe() %></span>
+                        <div class="groupe-info">
+                            <span>Intervalle : <%= groupe.getHeureDebut() %> - <%= groupe.getHeureFin() %></span>
+                            <span><%= groupe.getReservations().size() %> résa(s) | <%= groupe.getNombrePersonnesTotal() %> pers | <%= groupe.getVehiculesAssignes().size() %> véhicule(s)</span>
+                            <span class="groupe-depart">DÉPART : <%= groupe.getHeureDepart() %></span>
                         </div>
-                        <span class="vh-count"><%= vehiculePlanning.getReservations().size() %> reservation(s)</span>
                     </div>
+                    
+                    <div class="groupe-content">
+                        <% for (VehiculePlanningDTO vehiculePlanning : groupe.getVehiculesAssignes()) {
+                            int totalPersonnes = vehiculePlanning.getNombrePassagers() != null ? 
+                                vehiculePlanning.getNombrePassagers() : vehiculePlanning.calculerNombrePassagers();
+                        %>
+                            <div class="vehicle-section">
+                                <div class="vehicle-header">
+                                    <span class="vh-ref"><%= vehiculePlanning.getVehicule().getReference() %></span>
+                                    <div class="vh-meta">
+                                        <span><%= vehiculePlanning.getVehicule().getPlace() %> pl (<%= totalPersonnes %> occ)</span>
+                                        <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
+                                        <span><%= vehiculePlanning.getDestinationString() %></span>
+                                        <span><%= String.format("%.1f", vehiculePlanning.getDistanceTotale()) %> km</span>
+                                    </div>
+                                    <span class="vh-count"><%= vehiculePlanning.getReservations().size() %> résa(s)</span>
+                                </div>
 
-                    <table class="planning-table">
-                        <thead>
-                            <tr>
-                                <th>Ordre</th>
-                                <th>Reference</th>
-                                <th>Hotel</th>
-                                <th>Personnes</th>
-                                <th>Heure RDV</th>
-                                <th>Depart segment</th>
-                                <th>Arrivee hotel</th>
-                                <th>Distance (TNR)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <% int ordre = 1;
-                        for (ReservationPlanningDTO resPlanning : vehiculePlanning.getReservations()) { %>
-                            <tr>
-                                <td><%= ordre++ %></td>
-                                <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
-                                <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
-                                <td><%= resPlanning.getReservation().getNombre() %></td>
-                                <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>
-                                <td class="td-time"><%= resPlanning.getHeureDepart() %></td>
-                                <td class="td-time"><%= resPlanning.getHeureRetour() %></td>
-                                <td><%= String.format("%.1f", resPlanning.getDistanceKm()) %> km</td>
-                            </tr>
+                                <table class="planning-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordre</th>
+                                            <th>Référence</th>
+                                            <th>Hôtel</th>
+                                            <th>Personnes</th>
+                                            <th>Heure RDV</th>
+                                            <th>Départ segment</th>
+                                            <th>Arrivée hôtel</th>
+                                            <th>Distance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <% int ordre = 1;
+                                    for (ReservationPlanningDTO resPlanning : vehiculePlanning.getReservations()) { %>
+                                        <tr>
+                                            <td><%= ordre++ %></td>
+                                            <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
+                                            <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
+                                            <td><%= resPlanning.getReservation().getNombre() %></td>
+                                            <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>
+                                            <td class="td-time"><%= resPlanning.getHeureDepart() %></td>
+                                            <td class="td-time"><%= resPlanning.getHeureRetour() %></td>
+                                            <td><%= String.format("%.1f", resPlanning.getDistanceKm()) %> km</td>
+                                        </tr>
+                                    <% } %>
+                                    </tbody>
+                                </table>
+
+                                <div class="retour-row">
+                                    <span class="retour-label"><i class="fas fa-plane-arrival"></i> Retour à l'aéroport (TNR)</span>
+                                    <span class="retour-time"><%= vehiculePlanning.getHeureRetourAeroport() %></span>
+                                </div>
+                            </div>
                         <% } %>
-                        </tbody>
-                    </table>
-
-                    <div class="retour-row">
-                        <span class="retour-label"><i class="fas fa-plane-arrival"></i> Retour a l'aeroport (TNR)</span>
-                        <span class="retour-time"><%= vehiculePlanning.getHeureRetourAeroport() %></span>
                     </div>
                 </div>
             <% } %>
@@ -216,14 +262,14 @@
         <% } else if (request.getAttribute("dateSelectionnee") != null) { %>
             <div class="empty-state">
                 <i class="fas fa-calendar-times"></i>
-                <h2>Aucune reservation</h2>
-                <p>Aucune reservation trouvee pour la date selectionnee.</p>
+                <h2>Aucune réservation</h2>
+                <p>Aucune réservation trouvée pour la date sélectionnée.</p>
             </div>
         <% } else { %>
             <div class="empty-state">
                 <i class="fas fa-calendar-day"></i>
-                <h2>Selectionnez une date</h2>
-                <p>Veuillez selectionner une date pour afficher le planning des vehicules.</p>
+                <h2>Sélectionnez une date</h2>
+                <p>Veuillez sélectionner une date pour afficher le planning des véhicules.</p>
             </div>
         <% } %>
     </main>
