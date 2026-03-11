@@ -65,4 +65,21 @@ public class VehiculePlanningDTO {
     public void setDistanceTotale(Double distanceTotale) {
         this.distanceTotale = distanceTotale;
     }
+
+    /**
+     * Construire une chaîne de destination du type TNR-Hotel1-Hotel2-TNR
+     */
+    public String getDestinationString() {
+        if (this.reservations == null || this.reservations.isEmpty()) {
+            return "TNR-TNR";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("TNR");
+        for (ReservationPlanningDTO rp : this.reservations) {
+            String lib = rp.getHotelLibelle() != null ? rp.getHotelLibelle() : "Inconnu";
+            sb.append("-").append(lib);
+        }
+        sb.append("-TNR");
+        return sb.toString();
+    }
 }

@@ -483,4 +483,30 @@ public class PlanificationService {
         }
         return disponibles;
     }
+
+    /**
+     * Récupérer les véhicules non assignés pour une date donnée.
+     * Un véhicule non assigné n'apparait pas dans le planning généré pour la date.
+     */
+    public List<Vehicule> getVehiculesNonAssignes(Date date) {
+        List<Vehicule> tousVehicules = getAllVehicules();
+        List<VehiculePlanningDTO> planning = genererPlanning(date);
+
+        if (planning.isEmpty()) return tousVehicules;
+
+        List<Integer> idsUtilises = new ArrayList<>();
+        for (VehiculePlanningDTO vp : planning) {
+            if (vp.getVehicule() != null && vp.getVehicule().getId() != null) {
+                idsUtilises.add(vp.getVehicule().getId());
+            }
+        }
+
+        List<Vehicule> libres = new ArrayList<>();
+        for (Vehicule v : tousVehicules) {
+            if (!idsUtilises.contains(v.getId())) {
+                libres.add(v);
+            }
+        }
+        return libres;
+    }
 }
