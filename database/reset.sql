@@ -11,3 +11,6 @@ DROP TABLE IF EXISTS reservation;
 DROP TABLE IF EXISTS vehicule;
 DROP TABLE IF EXISTS hotel cascade;
 DROP TABLE IF EXISTS client;
+DROP TABLE IF EXISTS type_carburant;
+DROP TABLE IF EXISTS parametre;
+DROP TABLE IF EXISTS configuration_attente;

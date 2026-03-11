@@ -75,6 +75,15 @@ CREATE TABLE parametre (
     description VARCHAR(255)
 );
 
+-- Table configuration du temps d'attente (Sprint 5)
+-- Permet de configurer le délai d'attente pour le regroupement des réservations
+CREATE TABLE configuration_attente (
+    id SERIAL PRIMARY KEY,
+    temps_attente_minutes INT NOT NULL DEFAULT 30,
+    description VARCHAR(255),
+    actif BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 -- Initialisation des hôtels
 INSERT INTO hotel (libelle) VALUES
 ('Colbert'),
@@ -131,14 +140,19 @@ INSERT INTO type_carburant (code, libelle) VALUES
 ('El', 'Electrique');
 
 -- Initialisation des véhicules
+-- Ordre de priorité : Diesel (type 1), Essence (type 2), puis autres (Hybride 3, Electrique 4)
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
-('VH-2026-001', 4, 1, 60.00),
-('VH-2026-002', 8, 1, 55.00),
-('VH-2026-003', 5, 2, 65.00),
-('VH-2026-004', 12, 3, 50.00),
-('VH-2026-005', 3, 4, 70.00),
-('VH-2026-006', 18, 1, 50.0);
+('VH-2026-001', 4, 1, 60.00),   -- 4 places, Diesel
+('VH-2026-002', 8, 1, 55.00),   -- 8 places, Diesel (priorite)
+('VH-2026-003', 5, 2, 65.00),   -- 5 places, Essence
+('VH-2026-004', 12, 3, 50.00),  -- 12 places, Hybride
+('VH-2026-005', 3, 4, 70.00),   -- 3 places, Electrique
+('VH-2026-006', 18, 1, 50.0);   -- 18 places, Diesel (gros vehicule)
 
 -- Initialisation des paramètres
 INSERT INTO parametre (cle, valeur, description) VALUES
 ('delai_attente', '30', 'Délai d''attente en minutes avant le départ du véhicule');
+
+-- Initialisation de la configuration du temps d'attente (Sprint 5)
+INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VALUES
+(30, 'Configuration par défaut - 30 minutes de délai pour le regroupement des réservations', TRUE);

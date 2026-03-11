@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.backoffice.dto.RegroupementDTO;
 import com.backoffice.dto.ReservationPlanningDTO;
 import com.backoffice.dto.VehiculePlanningDTO;
+import com.backoffice.models.ConfigurationAttente;
 import com.backoffice.models.Hotel;
 import com.backoffice.models.Parametre;
 import com.backoffice.models.Reservation;
@@ -20,22 +22,44 @@ import jakarta.persistence.TypedQuery;
 public class PlanificationService {
 
     private static final String CODE_AEROPORT = "TNR";
+    private static final int DEFAULT_DELAI_ATTENTE = 30; // Délai par défaut en minutes
 
     // =========================================================================
     // Méthodes d'accès aux données
     // =========================================================================
 
     /**
-     * Récupérer le délai d'attente depuis la table parametre
+     * Récupérer le délai d'attente depuis la table configuration_attente (Sprint 5)
+     * ou depuis la table parametre en fallback.
+     * 
+     * Priorité: 
+     * 1. Table configuration_attente (entrée active)
+     * 2. Table parametre (clé 'delai_attente')
+     * 3. Valeur par défaut (30 minutes)
      */
     public int getDelaiAttente() {
         EntityManager em = JPAUtil.getEntityManager();
         try {
+            // D'abord essayer la nouvelle table configuration_attente (Sprint 5)
+            try {
+                TypedQuery<ConfigurationAttente> configQuery = em.createQuery(
+                    "SELECT c FROM ConfigurationAttente c WHERE c.actif = true ORDER BY c.id DESC",
+                    ConfigurationAttente.class);
+                configQuery.setMaxResults(1);
+                List<ConfigurationAttente> configResult = configQuery.getResultList();
+                if (!configResult.isEmpty()) {
+                    return configResult.get(0).getTempsAttenteMinutes();
+                }
+            } catch (Exception e) {
+                // Table configuration_attente n'existe peut-être pas encore, continuer avec parametre
+            }
+
+            // Fallback sur la table parametre
             TypedQuery<Parametre> query = em.createQuery(
                 "SELECT p FROM Parametre p WHERE p.cle = :cle", Parametre.class);
             query.setParameter("cle", "delai_attente");
             List<Parametre> result = query.getResultList();
-            return result.isEmpty() ? 30 : result.get(0).getValeurInt();
+            return result.isEmpty() ? DEFAULT_DELAI_ATTENTE : result.get(0).getValeurInt();
         } finally {
             em.close();
         }
@@ -194,21 +218,47 @@ public class PlanificationService {
         return meilleurs.get(0);
     }
 
+    /**
+     * Priorité des carburants selon Sprint 5:
+     * 1. Diesel (D) - priorité 1
+     * 2. Essence (Es) - priorité 2
+     * 3. Autres (H, El, etc.) - priorité 3 (random parmi eux)
+     */
     private int getPrioriteCarburant(Vehicule v) {
         String code = v.getTypeCarburant() != null ? v.getTypeCarburant().getCode() : "";
         switch (code) {
-            case "D":  return 1;
-            case "H":  return 2;
-            case "Es": return 3;
-            case "El": return 4;
-            default:   return 5;
+            case "D":  return 1;  // Diesel - priorité maximale
+            case "Es": return 2;  // Essence - deuxième priorité
+            default:   return 3;  // Autres (Hybride, Electrique, etc.) - même priorité, random
         }
     }
 
     /**
-     * Générer le planning complet pour une date donnée
+     * Générer le planning complet pour une date donnée.
+     * 
+     * Sprint 5 - Logique de regroupement avec RegroupementDTO :
+     * 1. Créer les regroupements (groupes de réservations par intervalle)
+     * 2. Pour chaque groupe, assigner les véhicules
+     * 3. TOUS les véhicules d'un même groupe partent à la même heure = heure de la DERNIÈRE réservation
      */
     public List<VehiculePlanningDTO> genererPlanning(Date date) {
+        // Créer les regroupements et assigner les véhicules
+        List<RegroupementDTO> regroupements = genererRegroupements(date);
+        
+        // Collecter tous les véhicules assignés
+        List<VehiculePlanningDTO> planning = new ArrayList<>();
+        for (RegroupementDTO groupe : regroupements) {
+            planning.addAll(groupe.getVehiculesAssignes());
+        }
+        
+        return planning;
+    }
+    
+    /**
+     * Générer les regroupements pour une date donnée.
+     * Cette méthode retourne les groupes avec leurs véhicules assignés ET les réservations non assignées.
+     */
+    public List<RegroupementDTO> genererRegroupements(Date date) {
         List<Reservation> reservations = getReservationsByDate(date);
         if (reservations.isEmpty()) return new ArrayList<>();
 
@@ -216,76 +266,158 @@ public class PlanificationService {
         int delaiAttente = getDelaiAttente();
         Integer aeroportId = getAeroportId();
 
-        // Trier par heure ASC, puis nombre de personnes DESC (gros groupes d'abord dans même créneau)
-        reservations.sort((r1, r2) -> {
-            int cmp = r1.getHeure().compareTo(r2.getHeure());
-            if (cmp != 0) return cmp;
-            return Integer.compare(r2.getNombre(), r1.getNombre());
-        });
+        // Trier par heure ASC
+        reservations.sort((r1, r2) -> r1.getHeure().compareTo(r2.getHeure()));
 
-        List<VehiculePlanningDTO> planning = new ArrayList<>();
+        List<RegroupementDTO> regroupements = new ArrayList<>();
         boolean[] assignees = new boolean[reservations.size()];
+        List<Vehicule> vehiculesGlobalementUtilises = new ArrayList<>();
+        int numeroGroupe = 1;
 
         for (int i = 0; i < reservations.size(); i++) {
             if (assignees[i]) continue;
 
-            Reservation resaPrincipale = reservations.get(i);
+            // Cette réservation définit le début d'un nouveau groupe/intervalle
+            Reservation premiereDuGroupe = reservations.get(i);
+            Time debutIntervalle = premiereDuGroupe.getHeure();
+            Time finIntervalle = ajouterMinutes(debutIntervalle, delaiAttente);
 
-            // Fenêtre temporelle : heure_premiere_resa + delai_attente
-            Time limiteHeure = ajouterMinutes(resaPrincipale.getHeure(), delaiAttente);
-
-            // Collecter les autres réservations dans cette fenêtre (pas encore assignées)
-            List<Integer> autresIndices = new ArrayList<>();
+            // Créer le regroupement
+            RegroupementDTO groupe = new RegroupementDTO(numeroGroupe++, debutIntervalle, finIntervalle, delaiAttente);
+            
+            // Collecter TOUTES les réservations dans cet intervalle
+            List<Integer> indicesGroupe = new ArrayList<>();
+            indicesGroupe.add(i);
+            groupe.ajouterReservation(premiereDuGroupe);
+            
             for (int j = i + 1; j < reservations.size(); j++) {
-                if (!assignees[j] && reservations.get(j).getHeure().compareTo(limiteHeure) <= 0) {
-                    autresIndices.add(j);
+                if (!assignees[j] && reservations.get(j).getHeure().compareTo(finIntervalle) <= 0) {
+                    indicesGroupe.add(j);
+                    groupe.ajouterReservation(reservations.get(j));
                 }
             }
+            
+            // L'heure de départ COMMUNE pour tous les véhicules de ce groupe
+            // = heure de la DERNIÈRE réservation du groupe
+            Time heureDepartGroupe = groupe.getHeureDepart();
 
-            // Chercher le meilleur véhicule pour la résa principale
-            List<Vehicule> vehiculesUtilises = getVehiculesUtilises(planning);
+            // Calculer le total de personnes du groupe
+            int totalPersonnesGroupe = groupe.getNombrePersonnesTotal();
+
+            // Trier les réservations du groupe par heure (pour l'itinéraire optimal)
+            indicesGroupe.sort((a, b) -> reservations.get(a).getHeure().compareTo(reservations.get(b).getHeure()));
+
+            // Liste des véhicules disponibles (non encore utilisés globalement)
             List<Vehicule> disponibles = new ArrayList<>();
             for (Vehicule v : tousVehicules) {
-                if (!isVehiculeUtilise(vehiculesUtilises, v)) {
+                if (!isVehiculeUtilise(vehiculesGlobalementUtilises, v)) {
                     disponibles.add(v);
                 }
             }
 
-            Vehicule meilleur = trouverMeilleurVehicule(resaPrincipale.getNombre(), disponibles);
-            if (meilleur == null) {
-                meilleur = trouverMeilleurVehicule(resaPrincipale.getNombre(), tousVehicules);
-            }
-            if (meilleur == null) continue;
+            // Assigner ces réservations à autant de véhicules que nécessaire
+            List<VehiculePlanningDTO> vehiculesGroupe = new ArrayList<>();
 
-            VehiculePlanningDTO vehiculePlanning = new VehiculePlanningDTO(meilleur);
-            planning.add(vehiculePlanning);
-            assignees[i] = true;
-            ajouterReservationAuPlanning(vehiculePlanning, resaPrincipale, aeroportId, delaiAttente);
-
-            // Si le véhicule a un SURPLUS de places, essayer d'y ajouter d'autres résas de la fenêtre
-            int placesRestantes = meilleur.getPlace() - resaPrincipale.getNombre();
-            if (placesRestantes > 0 && !autresIndices.isEmpty()) {
-                // Trier par nombre de personnes DESC pour remplir au mieux
-                autresIndices.sort((a, b) -> Integer.compare(reservations.get(b).getNombre(), reservations.get(a).getNombre()));
-
-                for (int idx : autresIndices) {
-                    if (assignees[idx]) continue;
+            // STRATÉGIE 1 : Essayer de trouver UN véhicule pour tout le groupe
+            Vehicule vehiculePourTout = trouverMeilleurVehicule(totalPersonnesGroupe, disponibles);
+            
+            if (vehiculePourTout != null) {
+                // Un seul véhicule peut accueillir tout le groupe !
+                VehiculePlanningDTO vp = new VehiculePlanningDTO(vehiculePourTout);
+                vp.setHeureDebutIntervalle(debutIntervalle);
+                vp.setHeureFinIntervalle(finIntervalle);
+                
+                // Ajouter TOUTES les réservations à ce véhicule
+                for (int idx : indicesGroupe) {
                     Reservation resa = reservations.get(idx);
-                    if (resa.getNombre() <= placesRestantes) {
+                    assignees[idx] = true;
+                    ajouterReservationAuPlanning(vp, resa, aeroportId, delaiAttente);
+                }
+                
+                vehiculesGroupe.add(vp);
+                vehiculesGlobalementUtilises.add(vehiculePourTout);
+                disponibles.remove(vehiculePourTout);
+            } else {
+                // STRATÉGIE 2 : Bin-packing - remplir les véhicules au maximum
+                // Trier réservations par nombre de personnes DESC (gros groupes d'abord)
+                indicesGroupe.sort((a, b) -> Integer.compare(
+                    reservations.get(b).getNombre(), 
+                    reservations.get(a).getNombre()
+                ));
+
+                for (int idx : indicesGroupe) {
+                    if (assignees[idx]) continue;
+                    
+                    Reservation resa = reservations.get(idx);
+                    
+                    // Essayer de trouver un véhicule du groupe qui a encore de la place
+                    VehiculePlanningDTO vehiculeAvecPlace = null;
+                    int maxPlacesRestantes = 0;
+                    
+                    for (VehiculePlanningDTO vp : vehiculesGroupe) {
+                        int placesOccupees = vp.calculerNombrePassagers();
+                        int placesRestantes = vp.getVehicule().getPlace() - placesOccupees;
+                        if (placesRestantes >= resa.getNombre() && placesRestantes > maxPlacesRestantes) {
+                            vehiculeAvecPlace = vp;
+                            maxPlacesRestantes = placesRestantes;
+                        }
+                    }
+
+                    if (vehiculeAvecPlace != null) {
+                        // Ajouter à un véhicule existant du groupe
                         assignees[idx] = true;
-                        ajouterReservationAuPlanning(vehiculePlanning, resa, aeroportId, delaiAttente);
-                        placesRestantes -= resa.getNombre();
+                        ajouterReservationAuPlanning(vehiculeAvecPlace, resa, aeroportId, delaiAttente);
+                    } else {
+                        // Besoin d'un nouveau véhicule
+                        Vehicule meilleur = trouverMeilleurVehicule(resa.getNombre(), disponibles);
+                        
+                        if (meilleur == null) {
+                            // Aucun véhicule disponible avec assez de places
+                            groupe.ajouterReservationNonAssignee(resa);
+                            assignees[idx] = true;
+                            continue;
+                        }
+
+                        VehiculePlanningDTO nouveauVehicule = new VehiculePlanningDTO(meilleur);
+                        nouveauVehicule.setHeureDebutIntervalle(debutIntervalle);
+                        nouveauVehicule.setHeureFinIntervalle(finIntervalle);
+                        
+                        vehiculesGroupe.add(nouveauVehicule);
+                        vehiculesGlobalementUtilises.add(meilleur);
+                        disponibles.remove(meilleur);
+                        assignees[idx] = true;
+                        ajouterReservationAuPlanning(nouveauVehicule, resa, aeroportId, delaiAttente);
                     }
                 }
             }
+
+            // Calculer les itinéraires avec l'heure de départ COMMUNE du groupe
+            for (VehiculePlanningDTO vp : vehiculesGroupe) {
+                vp.setNombrePassagers(vp.calculerNombrePassagers());
+                calculerItineraire(vp, aeroportId, heureDepartGroupe);
+                groupe.ajouterVehicule(vp);
+            }
+            
+            regroupements.add(groupe);
         }
 
-        // Calculer les itinéraires (ordre par proximité, distances, heures)
-        for (VehiculePlanningDTO vp : planning) {
-            calculerItineraire(vp, aeroportId, delaiAttente);
+        return regroupements;
+    }
+    
+    /**
+     * Récupérer toutes les réservations non assignées pour une date donnée.
+     * Une réservation est non assignée quand aucun véhicule disponible ne peut la prendre
+     * (capacité insuffisante ou tous les véhicules sont utilisés).
+     */
+    public List<Reservation> getReservationsNonAssignees(Date date) {
+        List<RegroupementDTO> regroupements = genererRegroupements(date);
+        List<Reservation> nonAssignees = new ArrayList<>();
+        
+        for (RegroupementDTO groupe : regroupements) {
+            nonAssignees.addAll(groupe.getReservationsNonAssignees());
         }
-
-        return planning;
+        
+        return nonAssignees;
     }
 
     /**
@@ -304,38 +436,6 @@ public class PlanificationService {
         resaDTO.setTempsAttenteMin(delaiAttente);
 
         vehiculePlanning.addReservation(resaDTO);
-    }
-
-    /**
-     * Trouver un véhicule déjà planifié qui a assez de places restantes
-     * dans la même fenêtre temporelle
-     */
-    private VehiculePlanningDTO trouverVehiculePlanningAvecPlace(
-            List<VehiculePlanningDTO> planning, int nombrePersonnes,
-            Time heurePremierResa, int delaiAttente) {
-
-        Time limiteDepart = ajouterMinutes(heurePremierResa, delaiAttente);
-
-        for (VehiculePlanningDTO vp : planning) {
-            // Le véhicule doit être dans la même fenêtre temporelle
-            if (vp.getReservations().isEmpty()) continue;
-            Time heurePremiereDansVP = vp.getReservations().get(0).getReservation().getHeure();
-            Time limiteDepartVP = ajouterMinutes(heurePremiereDansVP, delaiAttente);
-
-            // Les fenêtres doivent se chevaucher
-            if (heurePremierResa.after(limiteDepartVP)) continue;
-
-            // Vérifier la capacité restante
-            int placesOccupees = 0;
-            for (ReservationPlanningDTO rp : vp.getReservations()) {
-                placesOccupees += rp.getReservation().getNombre();
-            }
-            int placesRestantes = vp.getVehicule().getPlace() - placesOccupees;
-            if (placesRestantes >= nombrePersonnes) {
-                return vp;
-            }
-        }
-        return null;
     }
 
     private List<Vehicule> getVehiculesUtilises(List<VehiculePlanningDTO> planning) {
@@ -357,8 +457,10 @@ public class PlanificationService {
      * Calculer l'itinéraire optimal pour un véhicule.
      * Ordre des dépôts par proximité (nearest neighbor).
      * Distance totale : TNR -> hotel1 -> hotel2 -> ... -> TNR
+     * 
+     * Sprint 5: L'heure de départ est passée en paramètre (commune à tout le groupe)
      */
-    private void calculerItineraire(VehiculePlanningDTO vp, Integer aeroportId, int delaiAttente) {
+    private void calculerItineraire(VehiculePlanningDTO vp, Integer aeroportId, Time heureDepartGroupe) {
         List<ReservationPlanningDTO> reservations = vp.getReservations();
         if (reservations.isEmpty()) return;
 
@@ -397,30 +499,14 @@ public class PlanificationService {
 
         vp.setReservations(ordreDepot);
 
-        // Heure RDV la plus tôt (premier client à l'aéroport)
-        Time premierRdv = ordreDepot.get(0).getReservation().getHeure();
-        for (ReservationPlanningDTO rp : ordreDepot) {
-            if (rp.getReservation().getHeure().before(premierRdv)) {
-                premierRdv = rp.getReservation().getHeure();
-            }
-        }
-
-        // Heure RDV la plus tardive (dernier client à l'aéroport)
-        Time dernierRdv = ordreDepot.get(0).getReservation().getHeure();
-        for (ReservationPlanningDTO rp : ordreDepot) {
-            if (rp.getReservation().getHeure().after(dernierRdv)) {
-                dernierRdv = rp.getReservation().getHeure();
-            }
-        }
-
-        // Le véhicule part de l'aéroport APRÈS le dernier RDV + délai d'attente (chargement)
-        Time heureDepart = ajouterMinutes(dernierRdv, delaiAttente);
-        vp.setHeureDepart(heureDepart);
+        // Sprint 5: L'heure de départ est fixée par le groupe (passée en paramètre)
+        // Tous les véhicules du même groupe partent à la même heure
+        vp.setHeureDepart(heureDepartGroupe);
 
         // Parcourir l'itinéraire : aéroport -> hôtel1 -> hôtel2 -> ... -> aéroport
         double distanceTotale = 0.0;
         posId = aeroportId;
-        Time heureCourante = heureDepart;
+        Time heureCourante = heureDepartGroupe;
 
         for (ReservationPlanningDTO rp : ordreDepot) {
             double distSegment = getDistance(posId, rp.getLieuHotelId());
