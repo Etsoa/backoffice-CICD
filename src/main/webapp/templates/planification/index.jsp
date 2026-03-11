@@ -128,6 +128,12 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search"></i> Afficher
                     </button>
+                    <% if (request.getAttribute("dateSelectionnee") != null) { %>
+                        <a href="${pageContext.request.contextPath}/planification/vehicules-non-assignes?date=${dateSelectionnee}"
+                           class="btn btn-primary" style="background:#16a34a; margin-left:8px;">
+                            <i class="fas fa-car"></i> Véhicules non assignés
+                        </a>
+                    <% } %>
                 </form>
             </div>
         </div>
@@ -162,6 +168,7 @@
                         <div class="vh-meta">
                             <span><%= vehiculePlanning.getVehicule().getPlace() %> places (<%= totalPersonnes %> occupees)</span>
                             <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
+                            <span><i class="fas fa-map-signs"></i> <%= vehiculePlanning.getDestinationString() %></span>
                             <span><%= String.format("%.0f", vehiculePlanning.getVehicule().getVitesseMoyenne()) %> km/h</span>
                             <span><i class="fas fa-clock"></i> Depart : <%= vehiculePlanning.getHeureDepart() %></span>
                             <span><i class="fas fa-road"></i> <%= vehiculePlanning.getDistanceTotale() != null ? String.format("%.1f", vehiculePlanning.getDistanceTotale()) : "0.0" %> km total</span>
