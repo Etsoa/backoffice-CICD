@@ -3,7 +3,9 @@ package com.backoffice.service;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import com.backoffice.dto.RegroupementDTO;
@@ -271,7 +273,8 @@ public class PlanificationService {
 
         List<RegroupementDTO> regroupements = new ArrayList<>();
         boolean[] assignees = new boolean[reservations.size()];
-        List<Vehicule> vehiculesGlobalementUtilises = new ArrayList<>();
+        // Map pour tracker l'heure de retour de chaque véhicule (vehiculeId -> heureRetour)
+        Map<Integer, Time> vehiculesHeureRetour = new HashMap<>();
         int numeroGroupe = 1;
 
         for (int i = 0; i < reservations.size(); i++) {
@@ -307,10 +310,13 @@ public class PlanificationService {
             // Trier les réservations du groupe par heure (pour l'itinéraire optimal)
             indicesGroupe.sort((a, b) -> reservations.get(a).getHeure().compareTo(reservations.get(b).getHeure()));
 
-            // Liste des véhicules disponibles (non encore utilisés globalement)
+            // Liste des véhicules disponibles pour ce groupe
+            // Un véhicule est disponible s'il n'a jamais été utilisé OU s'il est revenu avant l'heure de départ
             List<Vehicule> disponibles = new ArrayList<>();
             for (Vehicule v : tousVehicules) {
-                if (!isVehiculeUtilise(vehiculesGlobalementUtilises, v)) {
+                Time heureRetour = vehiculesHeureRetour.get(v.getId());
+                if (heureRetour == null || heureRetour.compareTo(heureDepartGroupe) <= 0) {
+                    // Véhicule disponible : jamais utilisé OU revenu avant le départ de ce groupe
                     disponibles.add(v);
                 }
             }
@@ -335,7 +341,6 @@ public class PlanificationService {
                 }
                 
                 vehiculesGroupe.add(vp);
-                vehiculesGlobalementUtilises.add(vehiculePourTout);
                 disponibles.remove(vehiculePourTout);
             } else {
                 // STRATÉGIE 2 : Bin-packing - remplir les véhicules au maximum
@@ -383,7 +388,6 @@ public class PlanificationService {
                         nouveauVehicule.setHeureFinIntervalle(finIntervalle);
                         
                         vehiculesGroupe.add(nouveauVehicule);
-                        vehiculesGlobalementUtilises.add(meilleur);
                         disponibles.remove(meilleur);
                         assignees[idx] = true;
                         ajouterReservationAuPlanning(nouveauVehicule, resa, aeroportId, delaiAttente);
@@ -392,10 +396,17 @@ public class PlanificationService {
             }
 
             // Calculer les itinéraires avec l'heure de départ COMMUNE du groupe
+            // et mettre à jour l'heure de retour de chaque véhicule
             for (VehiculePlanningDTO vp : vehiculesGroupe) {
                 vp.setNombrePassagers(vp.calculerNombrePassagers());
                 calculerItineraire(vp, aeroportId, heureDepartGroupe);
                 groupe.ajouterVehicule(vp);
+                
+                // Enregistrer l'heure de retour pour ce véhicule
+                // Permet de le réutiliser dans les groupes suivants si le départ est après ce retour
+                if (vp.getHeureRetourAeroport() != null) {
+                    vehiculesHeureRetour.put(vp.getVehicule().getId(), vp.getHeureRetourAeroport());
+                }
             }
             
             regroupements.add(groupe);
