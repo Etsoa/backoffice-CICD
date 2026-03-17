@@ -333,6 +333,42 @@ public class PlanificationService {
             mettreAJourIndicesReportees(groupe, reservations, tracking);
         }
 
+        // 8. Nettoyage des réservations non-assignées (retirer les fausses ou doublons)
+        Set<Integer> resasVuesDansNonAssignees = new HashSet<>();
+        // Parcourir à l'envers pour conserver uniquement la dernière tentative d'une réservation non-assignée
+        for (int i = regroupements.size() - 1; i >= 0; i--) {
+            RegroupementDTO groupe = regroupements.get(i);
+            groupe.getReservationsNonAssignees().removeIf(r -> {
+                // Trouver l'indice de la réservation
+                int idx = -1;
+                for (int j = 0; j < reservations.size(); j++) {
+                    if (reservations.get(j).getId().equals(r.getId())) {
+                        idx = j;
+                        break;
+                    }
+                }
+                // Si elle a été assignée finalement ailleurs, on l'enlève de la liste des non-assignées
+                if (idx != -1 && tracking.assignees[idx]) {
+                    return true;
+                }
+                
+                // Si elle est vraiment non-assignée, on s'assure de la ne garder qu'une seule fois
+                if (resasVuesDansNonAssignees.contains(r.getId())) {
+                    return true;
+                } else {
+                    resasVuesDansNonAssignees.add(r.getId());
+                    return false;
+                }
+            });
+        }
+
+        // 9. Retirer les groupes devenus complètement vides (fantômes) et renuméroter
+        regroupements.removeIf(g -> g.getReservations().isEmpty() && g.getReservationsNonAssignees().isEmpty());
+        int numReel = 1;
+        for (RegroupementDTO g : regroupements) {
+            g.setNumeroGroupe(numReel++);
+        }
+
         return regroupements;
     }
 
@@ -368,6 +404,7 @@ public class PlanificationService {
 
     /**
      * Créer l'intervalle d'un nouveau groupe.
+     * Ajouter TOUTES les réservations qui tombent dans l'intervalle [debut, debut+delaiAttente].
      */
     private RegroupementDTO creerIntervalleGroupe(int numeroGroupe, Reservation premiereDuGroupe, 
                                                    Set<Integer> indicesReportees, List<Reservation> reservations,
@@ -377,12 +414,40 @@ public class PlanificationService {
         
         RegroupementDTO groupe = new RegroupementDTO(numeroGroupe, debutIntervalle, finIntervalle, delaiAttente);
         
+        // Tracker les indices déjà ajoutés pour éviter les doublons DANS CE GROUPE
+        Set<Integer> indicesAjoutes = new HashSet<>();
+        
+        // Trouver l'indice de la première réservation
+        int indexPremiere = reservations.indexOf(premiereDuGroupe);
+        
         // Ajouter la première réservation
         groupe.ajouterReservation(premiereDuGroupe);
+        indicesAjoutes.add(indexPremiere);
         
-        // Ajouter les réservations reportées du groupe précédent
+        // Ajouter les réservations reportées du groupe précédent (sauf si déjà ajoutées)
         for (int indiceReporte : indicesReportees) {
-            groupe.ajouterReservation(reservations.get(indiceReporte));
+            if (!indicesAjoutes.contains(indiceReporte)) {
+                groupe.ajouterReservation(reservations.get(indiceReporte));
+                indicesAjoutes.add(indiceReporte);
+            }
+        }
+        
+        // Ajouter les réservations suivantes qui tombent dans l'intervalle (sauf celles déjà ajoutées)
+        for (int i = indexPremiere + 1; i < reservations.size(); i++) {
+            // Sauter si cette réservation est déjà ajoutée à ce groupe
+            if (indicesAjoutes.contains(i)) {
+                continue;
+            }
+            
+            Reservation resa = reservations.get(i);
+            // Si l'heure de la réservation <= finIntervalle, elle rentre dans le groupe
+            if (resa.getHeure().compareTo(finIntervalle) <= 0) {
+                groupe.ajouterReservation(resa);
+                indicesAjoutes.add(i);
+            } else {
+                // Dès qu'on sort de l'intervalle, on arrête (car réservations triées par heure)
+                break;
+            }
         }
         
         return groupe;
@@ -520,7 +585,8 @@ public class PlanificationService {
                 if (meilleur == null) {
                     // Aucun véhicule disponible - réservation non assignée
                     groupe.ajouterReservationNonAssignee(resa);
-                    tracking.assignees[idx] = true;
+                    // NE PAS METTRE à TRUE car elle doit être reportée
+                    tracking.assignees[idx] = false;
                     continue;
                 }
 
@@ -566,7 +632,14 @@ public class PlanificationService {
      */
     private void finaliserGroupe(RegroupementDTO groupe, List<VehiculePlanningDTO> vehiculesGroupe,
                                  TrackingData tracking, List<RegroupementDTO> regroupements) {
-        Time heureDepartGroupe = groupe.getHeureDepart();
+        // Heure de départ = heure de la DERNIÈRE réservation du groupe
+        List<Reservation> reservationsGroupe = groupe.getReservations();
+        Time heureDepartGroupe = reservationsGroupe.isEmpty() ? groupe.getHeureDepart() : 
+                                 reservationsGroupe.get(reservationsGroupe.size() - 1).getHeure();
+        
+        // Mettre à jour l'heure de départ du groupe pour la vue/UI
+        groupe.setHeureDepart(heureDepartGroupe);
+
         Integer aeroportId = getAeroportId();
 
         // Calculer les itinéraires avec l'heure de départ COMMUNE du groupe
@@ -591,7 +664,7 @@ public class PlanificationService {
         for (Reservation r : groupe.getReservationsNonAssignees()) {
             // Trouver l'indice de cette réservation dans le tableau principal
             for (int j = 0; j < reservations.size(); j++) {
-                if (reservations.get(j) == r && !tracking.assignees[j]) {
+                if (reservations.get(j).getId().equals(r.getId()) && !tracking.assignees[j]) {
                     tracking.indicesReportees.add(j);
                     break;
                 }
@@ -906,7 +979,9 @@ public class PlanificationService {
         vp.setDistanceTotale(assignation.getDistanceTotaleKm());
         vp.setNombrePassagers(assignation.getNombrePassagersTransportes());
 
-        // TODO: Charger les itinéraires si nécessaire pour reconstruire les ReservationPlanningDTO
+        // Les itinéraires sont disponibles via assignation.getItineraireArrets()
+        // Mais les ReservationPlanningDTO ne sont pas reconstruits (optimisation pour affichage simple)
+        // En cas de besoin futur, implémenter le chargement des ItineraireArret
 
         return vp;
     }
@@ -970,13 +1045,19 @@ public class PlanificationService {
      */
     private void sauvegarderMappingsRegroupementReservations(EntityManager em, Regroupement regroupement, 
                                                              RegroupementDTO groupeDTO) {
+        // Tracker les IDs déjà ajoutés pour éviter les duplicatas dans la base (ConstraintViolationException)
+        Set<Integer> idsAjoutes = new HashSet<>();
+        
         // Sauvegarder TOUTES les réservations (assignees + non-assignees) en une boucle
         List<Reservation> toutesReservations = new ArrayList<>();
         toutesReservations.addAll(groupeDTO.getReservations());
         toutesReservations.addAll(groupeDTO.getReservationsNonAssignees());
         
         for (Reservation resa : toutesReservations) {
-            em.persist(new RegroupementReservation(regroupement, resa));
+            if (resa != null && resa.getId() != null && !idsAjoutes.contains(resa.getId())) {
+                em.persist(new RegroupementReservation(regroupement, resa));
+                idsAjoutes.add(resa.getId());
+            }
         }
     }
 

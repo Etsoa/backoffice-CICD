@@ -60,7 +60,8 @@ INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
 ('VH-2026-003', 5, 2, 65.00),   -- 5 places, Essence
 ('VH-2026-004', 12, 3, 50.00),  -- 12 places, Hybride
 ('VH-2026-005', 3, 4, 70.00),   -- 3 places, Electrique
-('VH-2026-006', 18, 1, 50.00);  -- 18 places, Diesel
+('VH-2026-006', 18, 1, 50.00),  -- 18 places, Diesel
+('VH-2026-007', 3, 1, 60.00);   -- 3 places, Diesel (same capacity as VH-005)
 
 -- ============================================
 -- 1. CLIENTS - Quelques profils
@@ -74,26 +75,34 @@ INSERT INTO client (id_client, nom, prenom, email) VALUES
 ('C005', 'Petit', 'Luc', NULL);
 
 -- ============================================
--- 2. RÉSERVATIONS - Scénarios essentiels (10 réservations)
+-- 2. RÉSERVATIONS - Scénarios essentiels (17 réservations)
 -- ============================================
+-- 20/03: Groupement simple (fenêtre 30 min) - 1001-1003, puis hors fenêtre - 1004
+-- 21/03: Dépassement capacité - 2001-2002 (5 + 4 = 9 > 8)
+-- 22/03: Gros groupe - 3001 (12 pers)
+-- 23/03: Heures décalées - 4001 (06:00), 4002 (12:00)
+-- 24/03: Petite réservation - 5001 (1 pers)
+-- 25/03: Réservations reportées + réutilisation véhicule - 6001-6004
+-- 26/03: Nombre de trajets - réutilisation multi-groupe - 7001-7003
 
 INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
--- Groupement simple (fenêtre 30 min)
-(1001, 2, '2026-03-20', '07:00', 1),   -- 2 pers, Colbert
-(1002, 3, '2026-03-20', '07:15', 2),   -- 3 pers, Novotel (fenêtre)
-(1003, 2, '2026-03-20', '07:25', 3),   -- 2 pers, Ibis (fenêtre)
--- Hors fenêtre
-(1004, 4, '2026-03-20', '08:00', 4),   -- 4 pers, Lokanga (nouveau groupe)
--- Dépassement capacité
-(2001, 5, '2026-03-21', '08:00', 1),   -- 5 pers
-(2002, 4, '2026-03-21', '08:10', 2),   -- 4 pers (5+4=9 > 8 places)
--- Gros groupe
-(3001, 12, '2026-03-22', '09:00', 1),  -- 12 pers (VH-2026-004 ou 6)
--- Heures décalées
-(4001, 2, '2026-03-23', '06:00', 1),   -- Groupe seul
-(4002, 3, '2026-03-23', '12:00', 2),   -- Autre groupe
--- Petite réservation
-(5001, 1, '2026-03-24', '10:00', 3);   -- 1 pers seul
+(1001, 2, '2026-03-20', '07:00', 1),
+(1002, 3, '2026-03-20', '07:15', 2),
+(1003, 2, '2026-03-20', '07:25', 3),
+(1004, 4, '2026-03-20', '08:00', 4),
+(2001, 5, '2026-03-21', '08:00', 1),
+(2002, 4, '2026-03-21', '08:10', 2),
+(3001, 12, '2026-03-22', '09:00', 1),
+(4001, 2, '2026-03-23', '06:00', 1),
+(4002, 3, '2026-03-23', '12:00', 2),
+(5001, 1, '2026-03-24', '10:00', 3),
+(6001, 15, '2026-03-25', '09:10', 1),
+(6002, 18, '2026-03-25', '09:00', 2),
+(6003, 3, '2026-03-25', '10:30', 3),
+(6004, 4, '2026-03-25', '10:40', 4),
+(7001, 3, '2026-03-26', '09:00', 1),
+(7002, 3, '2026-03-26', '10:00', 2),
+(7003, 2, '2026-03-26', '11:00', 3);
 
 -- ============================================
 -- 3. TOKENS - Quelques exemples
@@ -122,83 +131,53 @@ INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VA
 (30, 'Configuration standard - 30 minutes', TRUE);
 
 -- ============================================
--- 6. PLANIFICATIONS SAUVEGARDÉES
--- ============================================
-
--- Une planification simple pour test
-INSERT INTO planification (date_planification, statut, delai_attente_utilise,
-                           nombre_regroupements, nombre_reservations_total,
-                           nombre_reservations_assignees, nombre_vehicules_utilises, actif) VALUES
-('2026-03-20', 'ACTIVE', 30, 2, 4, 4, 2, TRUE);
-
--- ============================================
--- 7. REGROUPEMENTS
--- ============================================
-
-INSERT INTO regroupement (planification_id, numero_regroupement, heure_depart_groupe,
-                          nombre_reservations, nombre_passagers_total, nombre_vehicules_assignes) VALUES
-(1, 1, '07:25', 3, 7, 1),    -- Groupe 1: réservations 1001-1003
-(1, 2, '08:00', 1, 4, 1);    -- Groupe 2: réservation 1004
-
--- ============================================
--- 8. REGROUPEMENT_RESERVATION - Mappings
--- ============================================
-
-INSERT INTO regroupement_reservation (regroupement_id, reservation_id) VALUES
-(1, 1), (1, 2), (1, 3),   -- Groupe 1
-(2, 4);                     -- Groupe 2
-
--- ============================================
--- 9. ASSIGNATION_VEHICULE - Véhicules assignés
--- ============================================
-
-INSERT INTO assignation_vehicule (regroupement_id, vehicule_id, numero_ordre_groupe,
-                                  nombre_trajet_effectues, heure_depart_aeroport, heure_retour_aeroport,
-                                  distance_totale_km, temps_total_minutes, nombre_passagers_transportes) VALUES
-(1, 3, 1, 1, '07:00', '08:15', 35.6, 75, 7),
-(2, 1, 1, 1, '08:00', '08:50', 37.0, 50, 4);
-
--- ============================================
--- 10. ITINERAIRE_ARRET - Détails des trajets
--- ============================================
-
--- Itinéraire groupe 1 (VH-2026-003)
-INSERT INTO itineraire_arret (assignation_vehicule_id, ordre_arret, lieu_id, hotel_id,
-                              heure_arrivee, heure_depart, nombre_passagers_embarques, distance_depuis_prev_km) VALUES
-(1, 1, 1, NULL, '07:00', '07:05', 0, 0),
-(1, 2, 2, 1, '07:23', '07:28', 2, 18.5),
-(1, 3, 3, 2, '07:31', '07:36', 5, 3.5),
-(1, 4, 4, 3, '07:38', '07:43', 7, 2.0),
-(1, 5, 1, NULL, '08:00', '08:15', 7, 17.8);
-
--- Itinéraire groupe 2 (VH-2026-001)
-INSERT INTO itineraire_arret (assignation_vehicule_id, ordre_arret, lieu_id, hotel_id,
-                              heure_arrivee, heure_depart, nombre_passagers_embarques, distance_depuis_prev_km) VALUES
-(2, 1, 1, NULL, '08:00', '08:05', 0, 0),
-(2, 2, 5, 4, '08:24', '08:30', 4, 19.3),
-(2, 3, 1, NULL, '08:50', '08:50', 4, 19.3);
-
--- ============================================
--- 11. SUIVI_TRAJET_VEHICULE - Analytics
--- ============================================
-
-INSERT INTO suivi_trajet_vehicule (planification_id, vehicule_id, date_planification,
-                                   nombre_regroupements_assignes, nombre_passagers_total,
-                                   distance_totale_km, temps_total_heures,
-                                   heure_premiere_utilisation, heure_derniere_retour) VALUES
-(1, 3, '2026-03-20', 1, 7, 35.6, 1.25, '07:00', '08:15'),
-(1, 1, '2026-03-20', 1, 4, 37.0, 0.83, '08:00', '08:50');
-
--- ============================================
 -- FIN DES DONNÉES DE TEST SPRINT 6
 -- ============================================
 -- Résumé: 
 -- ✓ 5 clients
--- ✓ 10 réservations (scénarios clés)
+-- ✓ 17 réservations (scénarios clés - généreront des planifications auto)
+--   - 20/03: 4 réservations (2 groupes simples)
+--   - 21/03: 2 réservations (1 groupe avec dépassement capacité)
+--   - 22/03: 1 réservation (gros groupe)
+--   - 23/03: 2 réservations (heures décalées)
+--   - 24/03: 1 réservation (simple)
+--   - 25/03: 4 réservations (réservations REPORTÉES + réutilisation véhicule)
+--   - 26/03: 3 réservations (nombre de trajets - comparaison VH-005 vs VH-007)
+-- ✓ 7 véhicules (dont VH-007 avec même capacité que VH-005 pour tester critères)
 -- ✓ 4 tokens
--- ✓ 3 paramètres essentiels
--- ✓ 1 planification avec 2 regroupements
--- ✓ 2 assignations véhicules
--- ✓ Itinéraires complets
--- ✓ Suivi de trajet pour analytics
+-- ✓ 3 paramètres essentiels + 1 configuration_attente
+-- 
+-- NOTE IMPORTANTE:
+-- ✓ Les planifications, regroupements, assignations et itinéraires
+--   sont GÉNÉRÉS AUTOMATIQUEMENT par le code via genererRegroupements()
+--   et sauvegarderPlanification(). Ne pas les insérer manuellement!
+-- ✓ Appeler genererOuGenerer(Date) pour générer la planification du jour
+-- 
+-- SCÉNARIO 25/03 (Réservations reportées + réutilisation de véhicule):
+-- 
+-- Groupe 1 (09:00-09:30):
+--   - Réservation 6002 (18 pers, 09:00) → VH-2026-006 (18 places), revient ~10:15
+--   - Réservation 6001 (15 pers, 09:10) → Seul VH-006 peut prendre 15 pers (VH-004 = 12 < 15)
+--     MAIS VH-006 occupé par 6002 → 6001 est REJECTÉE → REPORTÉE
+-- 
+-- Groupe 2 (10:30-11:00):
+--   - Réservation 6001 REPORTÉE (15 pers) → VH-2026-006 revenu à 10:15, DISPONIBLE ✓ → peut être ASSIGNÉE
+--   - Réservation 6003 (3 pers, 10:30) → autre véhicule
+--   - Réservation 6004 (4 pers, 10:40) → autre véhicule
+-- 
+-- SCÉNARIO 26/03 (Nombre de trajets - VH-005 vs VH-007, même capacité 3 places):
+-- 
+-- Groupe 1 (09:00-09:30):
+--   - Réservation 7001 (3 pers, 09:00) → VH-2026-005 (3 places), 1er TRAJET, revient ~09:50
+-- 
+-- Groupe 2 (10:00-10:30):
+--   - Réservation 7002 (3 pers, 10:00) → VH-007 (nouveau, 3 places, 0 trajets) vs VH-005 (1 trajet)
+--     Capacité: égale (3 pers = 3 places) → Nombre de trajets: 0 < 1 → VH-007 gagne
+--     → VH-2026-007 utilisé, 1er TRAJET, revient ~10:50
+-- 
+-- Groupe 3 (11:00-11:30):
+--   - Réservation 7003 (2 pers, 11:00) → VH-005 revenu ~10:30 (1 trajet) vs VH-007 revenu ~10:50 (1 trajet)
+--     Capacité: VH-005=3 places, écart=1 | VH-007=3 places, écart=1 (égal)
+--     Trajets: VH-005=1  | VH-007=1 (égal)
+--     Carburant: VH-007 Diesel prioritaire sur VH-005 Électrique → VH-007 choisi (2e TRAJET)
 -- ============================================

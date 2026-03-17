@@ -154,6 +154,9 @@ public class RegroupementDTO {
     }
     
     public void ajouterReservationNonAssignee(Reservation resa) {
+        // Enlever de la liste des réservations principales par ID (car Reservation n'implémente pas equals())
+        this.reservations.removeIf(r -> r.getId().equals(resa.getId()));
+        // Ajouter à la liste des non assignées
         this.reservationsNonAssignees.add(resa);
     }
     
