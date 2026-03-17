@@ -45,7 +45,7 @@ public class ItineraireArret {
     @Column(name = "nombre_passagers_embarques")
     private Integer nombrePassagersEmbarques;
 
-    @Column(name = "distance_depuis_prev_km", precision = 8, scale = 2)
+    @Column(name = "distance_depuis_prev_km", columnDefinition = "DECIMAL(8,2)")
     private Double distanceDepuisPrevKm;
 
     @Column(name = "date_creation", nullable = false)

@@ -41,7 +41,7 @@ public class AssignationVehicule {
     @Column(name = "heure_retour_aeroport", nullable = false)
     private Time heureRetourAeroport;
 
-    @Column(name = "distance_totale_km", nullable = false, precision = 8, scale = 2)
+    @Column(name = "distance_totale_km", nullable = false, columnDefinition = "DECIMAL(8,2)")
     private Double distanceTotaleKm;
 
     @Column(name = "temps_total_minutes", nullable = false)

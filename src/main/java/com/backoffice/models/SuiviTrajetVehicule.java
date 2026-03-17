@@ -39,10 +39,10 @@ public class SuiviTrajetVehicule {
     @Column(name = "nombre_passagers_total")
     private Integer nombrePassagersTotal;
 
-    @Column(name = "distance_totale_km", precision = 10, scale = 2)
+    @Column(name = "distance_totale_km", columnDefinition = "DECIMAL(10,2)")
     private Double distanceTotaleKm;
 
-    @Column(name = "temps_total_heures", precision = 5, scale = 2)
+    @Column(name = "temps_total_heures", columnDefinition = "DECIMAL(5,2)")
     private Double tempsTotalHeures;
 
     @Column(name = "heure_premiere_utilisation")

@@ -1,7 +1,66 @@
 -- ============================================
--- SPRINT 6 - DONNÉES DE TEST SIMPLIFIÉES
--- Couverture légère des scénarios essentiels
+-- SPRINT 6 - DONNÉES DE TEST COMPLÈTES ET INDÉPENDANTES
+-- Fichier autonome - pas besoin de database.sql
 -- ============================================
+
+-- ============================================
+-- DONNÉES DE BASE - Types de carburant
+-- ============================================
+
+INSERT INTO type_carburant (code, libelle) VALUES
+('D', 'Diesel'),
+('Es', 'Essence'),
+('H', 'Hybride'),
+('El', 'Electrique');
+
+-- ============================================
+-- DONNÉES DE BASE - Hôtels
+-- ============================================
+
+INSERT INTO hotel (libelle) VALUES
+('Colbert'),
+('Novotel'),
+('Ibis'),
+('Lokanga');
+
+-- ============================================
+-- DONNÉES DE BASE - Lieux (aéroport et destinations)
+-- ============================================
+
+INSERT INTO lieu (code, libelle) VALUES
+('TNR', 'Ivato'),          -- Aéroport
+('COL', 'Colbert'),
+('NOV', 'Novotel'),
+('IBL', 'Ibis'),
+('LOK', 'Lokanga');
+
+-- ============================================
+-- DONNÉES DE BASE - Distances
+-- ============================================
+
+INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
+(1, 2, 18.5),  -- Ivato <-> Colbert
+(1, 3, 16.2),  -- Ivato <-> Novotel
+(1, 4, 17.8),  -- Ivato <-> Ibis
+(1, 5, 19.3),  -- Ivato <-> Lokanga
+(2, 3, 3.5),   -- Colbert <-> Novotel
+(2, 4, 2.8),   -- Colbert <-> Ibis
+(2, 5, 4.0),   -- Colbert <-> Lokanga
+(3, 4, 2.0),   -- Novotel <-> Ibis
+(3, 5, 5.2),   -- Novotel <-> Lokanga
+(4, 5, 3.6);   -- Ibis <-> Lokanga
+
+-- ============================================
+-- DONNÉES DE BASE - Véhicules
+-- ============================================
+
+INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
+('VH-2026-001', 4, 1, 60.00),   -- 4 places, Diesel
+('VH-2026-002', 8, 1, 55.00),   -- 8 places, Diesel
+('VH-2026-003', 5, 2, 65.00),   -- 5 places, Essence
+('VH-2026-004', 12, 3, 50.00),  -- 12 places, Hybride
+('VH-2026-005', 3, 4, 70.00),   -- 3 places, Electrique
+('VH-2026-006', 18, 1, 50.00);  -- 18 places, Diesel
 
 -- ============================================
 -- 1. CLIENTS - Quelques profils

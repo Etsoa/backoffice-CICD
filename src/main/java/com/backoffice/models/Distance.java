@@ -26,7 +26,7 @@ public class Distance {
     @JoinColumn(name = "lieu_arrivee", nullable = false)
     private Lieu lieuArrivee;
 
-    @Column(name = "km", nullable = false)
+    @Column(name = "km", nullable = false, columnDefinition = "DECIMAL(6,2)")
     private Double km;
 
     public Distance() {
