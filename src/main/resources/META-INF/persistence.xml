@@ -18,6 +18,12 @@
         <class>com.backoffice.models.Distance</class>
         <class>com.backoffice.models.Parametre</class>
         <class>com.backoffice.models.ConfigurationAttente</class>
+        <class>com.backoffice.models.Planification</class>
+        <class>com.backoffice.models.Regroupement</class>
+        <class>com.backoffice.models.RegroupementReservation</class>
+        <class>com.backoffice.models.AssignationVehicule</class>
+        <class>com.backoffice.models.ItineraireArret</class>
+        <class>com.backoffice.models.SuiviTrajetVehicule</class>
 
         <!-- Les propriétés sont injectées dynamiquement depuis application.properties via JPAUtil -->
     </persistence-unit>
