@@ -28,7 +28,7 @@ public class Vehicule {
     @JoinColumn(name = "type_carburant", nullable = false)
     private TypeCarburant typeCarburant;
 
-    @Column(name = "vitesse_moyenne", nullable = false)
+    @Column(name = "vitesse_moyenne", nullable = false, columnDefinition = "DECIMAL(5,2)")
     private Double vitesseMoyenne; // en km/h
 
     public Vehicule() {

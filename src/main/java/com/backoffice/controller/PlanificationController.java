@@ -4,11 +4,9 @@ import java.sql.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import com.backoffice.dto.RegroupementDTO;
 import com.backoffice.models.Reservation;
 import com.backoffice.models.Vehicule;
-
-import com.backoffice.dto.RegroupementDTO;
-import com.backoffice.dto.VehiculePlanningDTO;
 import com.backoffice.service.PlanificationService;
 
 import itu.framework.annotations.MyController;
@@ -28,7 +26,8 @@ public class PlanificationController {
             String dateParam = params.get("date").toString();
             try {
                 Date date = Date.valueOf(dateParam);
-                List<RegroupementDTO> regroupements = planificationService.genererRegroupements(date);
+                // Charger de la BD si existe, sinon générer et sauvegarder
+                List<RegroupementDTO> regroupements = planificationService.chargerOuGenerer(date);
                 List<Reservation> nonAssignees = planificationService.getReservationsNonAssignees(date);
                 
                 // Compter le nombre total de véhicules utilisés
