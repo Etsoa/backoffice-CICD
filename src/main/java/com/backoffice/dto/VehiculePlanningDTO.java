@@ -104,7 +104,9 @@ public class VehiculePlanningDTO {
         if (reservations == null) return 0;
         int total = 0;
         for (ReservationPlanningDTO rp : reservations) {
-            if (rp.getReservation() != null) {
+            if (rp.getNombrePassagers() != null) {
+                total += rp.getNombrePassagers();
+            } else if (rp.getReservation() != null) {
                 total += rp.getReservation().getNombre();
             }
         }

@@ -12,6 +12,7 @@ public class ReservationPlanningDTO {
     private Double distanceKm;
     private Integer tempsAttenteMin; // TA en minutes
     private Integer lieuHotelId; // ID du lieu correspondant à l'hôtel
+    private Integer nombrePassagers; // Nombre de passagers (peut être différent de reservation.nombre si division)
 
     public ReservationPlanningDTO() {
     }
@@ -24,6 +25,7 @@ public class ReservationPlanningDTO {
         this.heureRetour = heureRetour;
         this.distanceKm = distanceKm;
         this.tempsAttenteMin = tempsAttenteMin;
+        this.nombrePassagers = reservation != null ? reservation.getNombre() : 0;
     }
 
     public Reservation getReservation() {
@@ -80,5 +82,13 @@ public class ReservationPlanningDTO {
 
     public void setLieuHotelId(Integer lieuHotelId) {
         this.lieuHotelId = lieuHotelId;
+    }
+
+    public Integer getNombrePassagers() {
+        return nombrePassagers;
+    }
+
+    public void setNombrePassagers(Integer nombrePassagers) {
+        this.nombrePassagers = nombrePassagers;
     }
 }
