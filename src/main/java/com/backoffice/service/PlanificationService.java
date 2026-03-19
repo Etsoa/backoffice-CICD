@@ -82,7 +82,7 @@ public class PlanificationService {
     public List<Reservation> getReservationsByDate(Date date) {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             TypedQuery<Reservation> query = em.createQuery(
-                "SELECT r FROM Reservation r WHERE r.date = :date ORDER BY r.heure ASC",
+                "SELECT r FROM Reservation r WHERE r.date = :date ORDER BY r.heure ASC, r.reference ASC",
                 Reservation.class);
             query.setParameter("date", date);
             return query.getResultList();
@@ -292,8 +292,14 @@ public class PlanificationService {
         int delaiAttente = getDelaiAttente();
         Integer aeroportId = getAeroportId();
 
-        // Trier par heure ASC
-        reservations.sort((r1, r2) -> r1.getHeure().compareTo(r2.getHeure()));
+        // Trier par heure ASC puis référence ASC pour un ordre stable si même heure
+        reservations.sort((r1, r2) -> {
+            int cmpHeure = r1.getHeure().compareTo(r2.getHeure());
+            if (cmpHeure != 0) {
+                return cmpHeure;
+            }
+            return Integer.compare(r1.getReference(), r2.getReference());
+        });
 
         // 1. Initialiser tous les maps de tracking
         TrackingData tracking = initializerTrackingMaps(tousVehicules, reservations.size());
