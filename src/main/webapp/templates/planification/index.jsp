@@ -239,7 +239,7 @@
                                             <td><%= ordre++ %></td>
                                             <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
                                             <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
-                                            <td><%= resPlanning.getReservation().getNombre() %></td>
+                                            <td><%= resPlanning.getNombrePassagers() %></td>
                                             <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>
                                             <td class="td-time"><%= resPlanning.getHeureDepart() %></td>
                                             <td class="td-time"><%= resPlanning.getHeureRetour() %></td>

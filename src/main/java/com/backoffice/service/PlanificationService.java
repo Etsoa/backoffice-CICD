@@ -506,131 +506,122 @@ public class PlanificationService {
 
     /**
      * Assigner les véhicules aux réservations du groupe.
-     * Stratégie 1: Essayer 1 seul véhicule
-     * Stratégie 2: Bin-packing si nécessaire
+     * Sprint 7 : Répartition intelligente
+     * - Remplir les véhicules au maximum
+     * - Diviser les réservations si nécessaire
+     * - Prioriser les véhicules déjà utilisés
      */
     private List<VehiculePlanningDTO> assignerVehiculesAuGroupe(
         RegroupementDTO groupe, List<Integer> indicesGroupe, List<Reservation> reservations,
         TrackingData tracking, Integer aeroportId, int delaiAttente, List<Vehicule> vehiculesDisponibles,
         Time debutIntervalle, Time finIntervalle
     ) {
-        int totalPersonnesGroupe = groupe.getNombrePersonnesTotal();
+        // 1. Préparer les données
+        Map<Reservation, Integer> remainingPax = new HashMap<>(); // Passagers restants par réservation
+        List<Reservation> reservationsGroupe = new ArrayList<>();
         
-        // STRATÉGIE 1 : Essayer de trouver UN véhicule pour tout le groupe
-        Vehicule vehiculePourTout = trouverMeilleurVehicule(totalPersonnesGroupe, vehiculesDisponibles, 
-                                                            tracking.nombreTrajetsParVehicule);
-        
-        if (vehiculePourTout != null) {
-            assignerVehiculeStrategie1(vehiculePourTout, groupe, indicesGroupe, reservations, tracking, 
-                                      aeroportId, delaiAttente, debutIntervalle, finIntervalle, vehiculesDisponibles);
-        } else {
-            // STRATÉGIE 2 : Bin-packing
-            assignerVehiculeStrategie2(groupe, indicesGroupe, reservations, tracking, aeroportId, 
-                                      delaiAttente, debutIntervalle, finIntervalle, vehiculesDisponibles);
+        for (Integer idx : indicesGroupe) {
+            Reservation r = reservations.get(idx);
+            reservationsGroupe.add(r);
+            remainingPax.put(r, r.getNombre());
+        }
+
+        // 2. Trier les véhicules : Priorité aux déjà utilisés (trajets > 0) puis capacité Décroissante
+        List<Vehicule> sortedVehicles = new ArrayList<>(vehiculesDisponibles);
+        sortedVehicles.sort((v1, v2) -> {
+            int traj1 = tracking.nombreTrajetsParVehicule.getOrDefault(v1.getId(), 0);
+            int traj2 = tracking.nombreTrajetsParVehicule.getOrDefault(v2.getId(), 0);
+            
+            // Si l'un est utilisé et l'autre non, priorité à l'utilisé
+            if (traj1 > 0 && traj2 == 0) return -1;
+            if (traj1 == 0 && traj2 > 0) return 1;
+            
+            // Ensuite trier par capacité décroissante
+            return Integer.compare(v2.getPlace(), v1.getPlace());
+        });
+
+        // 3. Remplir les véhicules
+        for (Vehicule v : sortedVehicles) {
+            // Vérifier s'il reste des passagers à placer
+            boolean passagersRestants = false;
+            for (int reste : remainingPax.values()) {
+                if (reste > 0) { passagersRestants = true; break; }
+            }
+            if (!passagersRestants) break; // Tout le monde est casé
+
+            int capaciteRestante = v.getPlace();
+            
+            VehiculePlanningDTO vp = new VehiculePlanningDTO(v);
+            vp.setHeureDebutIntervalle(debutIntervalle);
+            vp.setHeureFinIntervalle(finIntervalle);
+            vp.setHeureDepart(finIntervalle); // Valeur par défaut, recalculée plus tard
+
+            boolean vehiculeUtilise = false;
+
+            // Parcourir les réservations dans l'ordre original pour éviter la fragmentation excessive
+            for (Reservation r : reservationsGroupe) {
+                int besoin = remainingPax.get(r);
+                if (besoin <= 0) continue;
+
+                if (capaciteRestante <= 0) break; // Véhicule plein
+
+                int aPrendre = Math.min(besoin, capaciteRestante);
+                
+                // Ajouter cette portion au véhicule
+                tracking.assignees[reservations.indexOf(r)] = true; // Marquer temporairement
+                ajouterReservationAuPlanning(vp, r, aeroportId, delaiAttente, aPrendre);
+                
+                remainingPax.put(r, besoin - aPrendre);
+                capaciteRestante -= aPrendre;
+                vehiculeUtilise = true;
+            }
+
+            if (vehiculeUtilise) {
+                groupe.ajouterVehicule(vp);
+                // Retirer de la liste des dispos pour ce groupe (ne pas réutiliser le même véhicule 2 fois dans le même groupe)
+                // Note: sortedVehicles est une copie, donc on ne modifie pas la liste originale itérée
+                // Mais `vehiculesDisponibles` (param) doit être mis à jour si on voulait l'utiliser ailleurs?
+                // Ici on continue juste la boucle sur sortedVehicles.
+                
+                // Incrémenter le nombre de trajets
+                tracking.nombreTrajetsParVehicule.put(v.getId(), 
+                    tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0) + 1);
+            }
+        }
+
+        // 4. Gérer les restes (Split & Non Assignées)
+        for (int i = 0; i < reservationsGroupe.size(); i++) {
+            Reservation r = reservationsGroupe.get(i);
+            int reste = remainingPax.get(r);
+            int originalIdx = indicesGroupe.get(i);
+            
+            if (reste == 0) {
+                // Entièrement assignée
+                tracking.assignees[originalIdx] = true;
+            } else {
+                // Reste des passagers -> Non assigné ou Split
+                tracking.assignees[originalIdx] = false; // Sera traité au prochain tour
+                
+                if (reste < r.getNombre()) {
+                    // C'est un SPLIT : on doit modifier la réservation originale ou la remplacer pour le prochain tour
+                    // On crée une copie avec le nombre réduit
+                    Reservation resteResa = new Reservation(
+                        r.getId(), r.getReference(), reste, r.getDate(), r.getHeure(), r.getHotel()
+                    );
+                    
+                    // Remplacer dans la liste principale
+                    reservations.set(originalIdx, resteResa);
+                    
+                    // Ajouter aux non-assignées du groupe (pour info debug/affichage)
+                    groupe.ajouterReservationNonAssignee(resteResa);
+                } else {
+                    // Pas touché du tout
+                    groupe.ajouterReservationNonAssignee(r);
+                }
+            }
         }
         
         return groupe.getVehiculesAssignes();
-    }
-
-    /**
-     * STRATÉGIE 1: Un seul véhicule peut accueillir tout le groupe.
-     */
-    private void assignerVehiculeStrategie1(Vehicule vehiculePourTout, RegroupementDTO groupe, 
-                                           List<Integer> indicesGroupe, List<Reservation> reservations,
-                                           TrackingData tracking, Integer aeroportId, int delaiAttente,
-                                           Time debutIntervalle, Time finIntervalle, List<Vehicule> vehiculesDisponibles) {
-        VehiculePlanningDTO vp = new VehiculePlanningDTO(vehiculePourTout);
-        vp.setHeureDebutIntervalle(debutIntervalle);
-        vp.setHeureFinIntervalle(finIntervalle);
-        
-        // Ajouter TOUTES les réservations à ce véhicule
-        for (int idx : indicesGroupe) {
-            Reservation resa = reservations.get(idx);
-            tracking.assignees[idx] = true;
-            ajouterReservationAuPlanning(vp, resa, aeroportId, delaiAttente);
-        }
-        
-        groupe.ajouterVehicule(vp);
-        vehiculesDisponibles.remove(vehiculePourTout);
-        
-        // Incrémenter le nombre de trajets
-        tracking.nombreTrajetsParVehicule.put(vehiculePourTout.getId(), 
-            tracking.nombreTrajetsParVehicule.get(vehiculePourTout.getId()) + 1);
-    }
-
-    /**
-     * STRATÉGIE 2: Bin-packing - remplir les véhicules au maximum.
-     */
-    private void assignerVehiculeStrategie2(RegroupementDTO groupe, List<Integer> indicesGroupe,
-                                           List<Reservation> reservations, TrackingData tracking,
-                                           Integer aeroportId, int delaiAttente,
-                                           Time debutIntervalle, Time finIntervalle, List<Vehicule> vehiculesDisponibles) {
-        // Trier réservations par nombre de personnes DESC (gros groupes d'abord)
-        indicesGroupe.sort((a, b) -> Integer.compare(
-            reservations.get(b).getNombre(), 
-            reservations.get(a).getNombre()
-        ));
-
-        for (int idx : indicesGroupe) {
-            if (tracking.assignees[idx]) continue;
-            
-            Reservation resa = reservations.get(idx);
-            
-            // 1. Essayer de trouver un véhicule du groupe qui a encore de la place
-            VehiculePlanningDTO vehiculeAvecPlace = trouverVehiculeAvecPlace(groupe.getVehiculesAssignes(), resa);
-
-            if (vehiculeAvecPlace != null) {
-                // Ajouter à un véhicule existant du groupe
-                tracking.assignees[idx] = true;
-                ajouterReservationAuPlanning(vehiculeAvecPlace, resa, aeroportId, delaiAttente);
-            } else {
-                // 2. Besoin d'un nouveau véhicule
-                Vehicule meilleur = trouverMeilleurVehicule(resa.getNombre(), vehiculesDisponibles, 
-                                                           tracking.nombreTrajetsParVehicule);
-                
-                if (meilleur == null) {
-                    // Aucun véhicule disponible - réservation non assignée
-                    groupe.ajouterReservationNonAssignee(resa);
-                    // NE PAS METTRE à TRUE car elle doit être reportée
-                    tracking.assignees[idx] = false;
-                    continue;
-                }
-
-                // Créer et assigner le nouveau véhicule
-                VehiculePlanningDTO nouveauVehicule = new VehiculePlanningDTO(meilleur);
-                nouveauVehicule.setHeureDebutIntervalle(debutIntervalle);
-                nouveauVehicule.setHeureFinIntervalle(finIntervalle);
-                
-                groupe.ajouterVehicule(nouveauVehicule);
-                vehiculesDisponibles.remove(meilleur);
-                
-                // Incrémenter le nombre de trajets
-                tracking.nombreTrajetsParVehicule.put(meilleur.getId(), 
-                    tracking.nombreTrajetsParVehicule.get(meilleur.getId()) + 1);
-                
-                tracking.assignees[idx] = true;
-                ajouterReservationAuPlanning(nouveauVehicule, resa, aeroportId, delaiAttente);
-            }
-        }
-    }
-
-    /**
-     * Chercher un véhicule déjà assigné au groupe qui a encore de la place.
-     */
-    private VehiculePlanningDTO trouverVehiculeAvecPlace(List<VehiculePlanningDTO> vehiculesGroupe, Reservation resa) {
-        VehiculePlanningDTO vehiculeAvecPlace = null;
-        int maxPlacesRestantes = 0;
-        
-        for (VehiculePlanningDTO vp : vehiculesGroupe) {
-            int placesOccupees = vp.calculerNombrePassagers();
-            int placesRestantes = vp.getVehicule().getPlace() - placesOccupees;
-            if (placesRestantes >= resa.getNombre() && placesRestantes > maxPlacesRestantes) {
-                vehiculeAvecPlace = vp;
-                maxPlacesRestantes = placesRestantes;
-            }
-        }
-        
-        return vehiculeAvecPlace;
     }
 
     /**
@@ -700,6 +691,14 @@ public class PlanificationService {
      */
     private void ajouterReservationAuPlanning(VehiculePlanningDTO vehiculePlanning,
                                                Reservation resa, Integer aeroportId, int delaiAttente) {
+        ajouterReservationAuPlanning(vehiculePlanning, resa, aeroportId, delaiAttente, resa.getNombre());
+    }
+
+    /**
+     * Ajouter une réservation au planning d'un véhicule (avec nombre spécifique de passagers)
+     */
+    private void ajouterReservationAuPlanning(VehiculePlanningDTO vehiculePlanning,
+                                               Reservation resa, Integer aeroportId, int delaiAttente, int nombrePassagers) {
         Integer lieuHotelId = getLieuIdByHotelId(resa.getHotel());
         String hotelLibelle = getHotelLibelle(resa.getHotel());
 
@@ -709,6 +708,7 @@ public class PlanificationService {
         resaDTO.setLieuHotelId(lieuHotelId);
         resaDTO.setDistanceKm(getDistance(aeroportId, lieuHotelId));
         resaDTO.setTempsAttenteMin(delaiAttente);
+        resaDTO.setNombrePassagers(nombrePassagers);
 
         vehiculePlanning.addReservation(resaDTO);
     }
