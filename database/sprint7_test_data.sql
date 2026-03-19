@@ -7,19 +7,21 @@
 -- ==============================================================================
 
 -- 1. NETTOYAGE PRÉALABLE (Pour repartir d'une base propre pour ce scénario)
---    Attention : Supprime toutes les données existantes.
-DELETE FROM assignation_vehicule;
-DELETE FROM regroupement_reservation;
-DELETE FROM regroupement;
-DELETE FROM planification;
-DELETE FROM reservation;
-DELETE FROM vehicule;
-DELETE FROM distance;
-DELETE FROM lieu;
-DELETE FROM hotel;
-DELETE FROM type_carburant;
-DELETE FROM configuration_attente;
-DELETE FROM parametre;
+--    Attention : Supprime toutes les données existantes et remet les séquences à 1.
+TRUNCATE TABLE
+	assignation_vehicule,
+	regroupement_reservation,
+	regroupement,
+	planification,
+	reservation,
+	vehicule,
+	distance,
+	lieu,
+	hotel,
+	type_carburant,
+	configuration_attente,
+	parametre
+RESTART IDENTITY CASCADE;
 
 -- ==============================================================================
 -- 2. CONFIGURATION ET RÉFÉRENTIELS
@@ -45,18 +47,17 @@ INSERT INTO hotel (libelle) VALUES
 ('Ibis');
 
 -- Lieux (Aéroport + Localisation Hôtels)
--- Note: Les IDs sont auto-incrémentés, on suppose ici ordre d'insertion 1, 2, 3...
 INSERT INTO lieu (code, libelle) VALUES
-('TNR', 'Ivato Aéroport'),  -- 1
-('COL', 'Colbert'),         -- 2
-('NOV', 'Novotel'),         -- 3
-('IBS', 'Ibis');            -- 4
+('TNR', 'Ivato Aéroport'),
+('COL', 'Colbert'),
+('NOV', 'Novotel'),
+('IBS', 'Ibis');
 
--- Distances entre Aéroport (1) et Hôtels (2,3,4)
+-- Distances entre l'aéroport (code TNR) et les lieux hôtels (codes COL/NOV/IBS)
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-(1, 2, 15.0), -- TNR -> Colbert (15km)
-(1, 3, 12.0), -- TNR -> Novotel (12km)
-(1, 4, 10.0); -- TNR -> Ibis (10km)
+((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'COL'), 15.0),
+((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'NOV'), 12.0),
+((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'IBS'), 10.0);
 
 -- ==============================================================================
 -- 3. VÉHICULES SPÉCIFIQUES DU SCÉNARIO SPRINT 7
@@ -65,12 +66,9 @@ INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
 --  - V1 : 8 places (Diesel - Prioritaire)
 --  - V2 : 3 places (Diesel)
 --
--- Les IDs de type_carburant dépendent de l'ordre d'insertion ci-dessus.
--- 'D' est le premier inséré -> ID 1.
-
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES 
-('V1-SPRINT7', 8, 1, 60.0), -- V1 : 8 pl, Diesel (ID 1)
-('V2-SPRINT7', 3, 1, 60.0); -- V2 : 3 pl, Diesel (ID 1)
+('V1-SPRINT7', 8, (SELECT id FROM type_carburant WHERE code = 'D'), 60.0),
+('V2-SPRINT7', 3, (SELECT id FROM type_carburant WHERE code = 'D'), 60.0);
 
 -- ==============================================================================
 -- 4. RÉSERVATIONS DU SCÉNARIO SPRINT 7
@@ -78,16 +76,16 @@ INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
 -- Date : 2026-05-01
 -- Heure : 08:00 (Toutes arrivent en même temps -> Même groupe)
 -- Référence | Nb Pers | Hôtel
--- 7001      | 6       | Colbert (ID 1)
--- 7002      | 4       | Novotel (ID 2)
--- 7003      | 3       | Ibis (ID 3)
+-- 7001      | 6       | Colbert
+-- 7002      | 4       | Novotel
+-- 7003      | 3       | Ibis
 -- -----------------------------------
 -- TOTAL     | 13 Personnes
 
 INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
-(7001, 6, '2026-05-01', '08:00:00', 1), -- R1
-(7002, 4, '2026-05-01', '08:00:00', 2), -- R2
-(7003, 3, '2026-05-01', '08:00:00', 3); -- R3
+(7001, 6, '2026-05-01', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
+(7002, 4, '2026-05-01', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Novotel')), 
+(7003, 3, '2026-05-01', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Ibis')); 
 
 -- ==============================================================================
 -- VÉRIFICATION DU RÉSULTAT ATTENDU

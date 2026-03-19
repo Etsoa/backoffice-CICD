@@ -82,7 +82,7 @@ public class PlanificationService {
     public List<Reservation> getReservationsByDate(Date date) {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             TypedQuery<Reservation> query = em.createQuery(
-                "SELECT r FROM Reservation r WHERE r.date = :date ORDER BY r.heure ASC",
+                "SELECT r FROM Reservation r WHERE r.date = :date ORDER BY r.heure ASC, r.reference ASC",
                 Reservation.class);
             query.setParameter("date", date);
             return query.getResultList();
@@ -292,8 +292,14 @@ public class PlanificationService {
         int delaiAttente = getDelaiAttente();
         Integer aeroportId = getAeroportId();
 
-        // Trier par heure ASC
-        reservations.sort((r1, r2) -> r1.getHeure().compareTo(r2.getHeure()));
+        // Trier par heure ASC puis référence ASC pour un ordre stable si même heure
+        reservations.sort((r1, r2) -> {
+            int cmpHeure = r1.getHeure().compareTo(r2.getHeure());
+            if (cmpHeure != 0) {
+                return cmpHeure;
+            }
+            return Integer.compare(r1.getReference(), r2.getReference());
+        });
 
         // 1. Initialiser tous les maps de tracking
         TrackingData tracking = initializerTrackingMaps(tousVehicules, reservations.size());
@@ -867,12 +873,42 @@ public class PlanificationService {
     public List<RegroupementDTO> chargerOuGenerer(Date date) {
         List<RegroupementDTO> planificationExistante = chargerPlanification(date);
         if (planificationExistante != null && !planificationExistante.isEmpty()) {
+            // Les données chargées depuis BD peuvent manquer le détail des réservations par véhicule.
+            // Dans ce cas, on régénère en mémoire pour l'affichage de la répartition.
+            if (hasMissingReservationBreakdown(planificationExistante)) {
+                return genererRegroupements(date);
+            }
             return planificationExistante;
         }
 
         List<RegroupementDTO> regroupements = genererRegroupements(date);
-        sauvegarderPlanification(date, regroupements);
-        return regroupements;
+        try {
+            sauvegarderPlanification(date, regroupements);
+            return regroupements;
+        } catch (RuntimeException e) {
+            // Cas de concurrence: une autre requête vient de sauvegarder la même date.
+            if (isDuplicateDatePlanification(e)) {
+                List<RegroupementDTO> planificationConcurrente = chargerPlanification(date);
+                if (planificationConcurrente != null && !planificationConcurrente.isEmpty()) {
+                    return planificationConcurrente;
+                }
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Vérifie si au moins un véhicule n'a pas le détail des réservations.
+     */
+    private boolean hasMissingReservationBreakdown(List<RegroupementDTO> regroupements) {
+        for (RegroupementDTO groupe : regroupements) {
+            for (VehiculePlanningDTO vp : groupe.getVehiculesAssignes()) {
+                if (vp.getReservations() == null || vp.getReservations().isEmpty()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -990,13 +1026,29 @@ public class PlanificationService {
      * Sauvegarder une planification complète en BD avec tous ses regroupements et véhicules.
      */
     public void sauvegarderPlanification(Date date, List<RegroupementDTO> regroupements) {
-        try (EntityManager em = JPAUtil.getEntityManager()) {
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
             em.getTransaction().begin();
 
-            // 1. Créer et persister la planification principale
-            Planification planification = creerPlanification(regroupements);
-            planification.setDatePlanification(date);
-            em.persist(planification);
+            // 1. Créer ou réutiliser la planification principale (idempotent par date)
+            Planification planification = trouverPlanificationParDate(em, date);
+            Planification stats = creerPlanification(regroupements);
+
+            if (planification == null) {
+                planification = stats;
+                planification.setDatePlanification(date);
+                em.persist(planification);
+            } else {
+                // Recalcul d'une date déjà existante: nettoyer les détails avant de réécrire
+                nettoyerDetailsPlanification(em, planification.getId());
+                planification.setStatut("ACTIVE");
+                planification.setDelaiAttenteUtilise(stats.getDelaiAttenteUtilise());
+                planification.setNombreRegroupements(stats.getNombreRegroupements());
+                planification.setNombreReservationsTotal(stats.getNombreReservationsTotal());
+                planification.setNombreReservationsAssignees(stats.getNombreReservationsAssignees());
+                planification.setNombreVehiculesUtilises(stats.getNombreVehiculesUtilises());
+                em.merge(planification);
+            }
 
             // 2. Sauvegarder chaque regroupement avec ses assignations
             for (RegroupementDTO groupeDTO : regroupements) {
@@ -1008,8 +1060,75 @@ public class PlanificationService {
 
             em.getTransaction().commit();
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Erreur lors de la sauvegarde de la planification: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
+    }
+
+        /**
+         * Chercher une planification existante pour une date donnée, peu importe son statut.
+         */
+        private Planification trouverPlanificationParDate(EntityManager em, Date date) {
+                TypedQuery<Planification> query = em.createQuery(
+                        "SELECT p FROM Planification p WHERE p.datePlanification = :date ORDER BY p.id DESC",
+                        Planification.class);
+                query.setParameter("date", date);
+                query.setMaxResults(1);
+                List<Planification> result = query.getResultList();
+                return result.isEmpty() ? null : result.get(0);
+        }
+
+        /**
+         * Supprimer les détails liés à une planification existante avant recalcul.
+         */
+        private void nettoyerDetailsPlanification(EntityManager em, Integer planificationId) {
+                em.createQuery("DELETE FROM ItineraireArret ia WHERE ia.assignationVehicule.id IN (" +
+                                            "SELECT a.id FROM AssignationVehicule a WHERE a.regroupement.id IN (" +
+                                            "SELECT r.id FROM Regroupement r WHERE r.planification.id = :planifId))")
+                    .setParameter("planifId", planificationId)
+                    .executeUpdate();
+
+                em.createQuery("DELETE FROM AssignationVehicule a WHERE a.regroupement.id IN (" +
+                                            "SELECT r.id FROM Regroupement r WHERE r.planification.id = :planifId)")
+                    .setParameter("planifId", planificationId)
+                    .executeUpdate();
+
+                em.createQuery("DELETE FROM RegroupementReservation rr WHERE rr.regroupement.id IN (" +
+                                            "SELECT r.id FROM Regroupement r WHERE r.planification.id = :planifId)")
+                    .setParameter("planifId", planificationId)
+                    .executeUpdate();
+
+                em.createQuery("DELETE FROM Regroupement r WHERE r.planification.id = :planifId")
+                    .setParameter("planifId", planificationId)
+                    .executeUpdate();
+
+                em.createQuery("DELETE FROM SuiviTrajetVehicule s WHERE s.planification.id = :planifId")
+                    .setParameter("planifId", planificationId)
+                    .executeUpdate();
+        }
+
+    /**
+     * Détecter une violation d'unicité sur date_planification (collision de concurrence).
+     */
+    private boolean isDuplicateDatePlanification(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase();
+                boolean hasDatePlanif = lower.contains("date_planification");
+                boolean hasUnique = lower.contains("uk_") || lower.contains("duplicate") || lower.contains("doubl") || lower.contains("unique");
+                if (hasDatePlanif && hasUnique) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     /**
@@ -1163,7 +1282,11 @@ public class PlanificationService {
         arret.setHotel(em.find(Hotel.class, rpDTO.getReservation().getHotel()));
         arret.setHeureArrivee(rpDTO.getHeureRetour());
         arret.setHeureDepart(rpDTO.getHeureRetour());
-        arret.setNombrePassagersEmbarques(rpDTO.getReservation().getNombre());
+        // Important pour les splits: utiliser le nombre réellement transporté sur ce segment.
+        Integer passagersSegment = rpDTO.getNombrePassagers() != null
+                ? rpDTO.getNombrePassagers()
+                : (rpDTO.getReservation() != null ? rpDTO.getReservation().getNombre() : 0);
+        arret.setNombrePassagersEmbarques(passagersSegment);
         return arret;
     }
 
