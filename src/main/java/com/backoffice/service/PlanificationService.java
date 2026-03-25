@@ -495,8 +495,15 @@ public class PlanificationService {
         
         for (Vehicule v : tousVehicules) {
             Time heureRetourVehicule = heureRetourParVehicule.get(v.getId());
-            // Disponible si: jamais utilisé (null) OU revenant avant le départ du groupe
-            if (heureRetourVehicule == null || heureRetourVehicule.compareTo(heureDepartGroupe) <= 0) {
+            Time heureDispoVehicule = v.getHeureDisponibilite();
+
+            // Disponible si:
+            // 1) jamais utilisé (null) OU revenant avant le départ du groupe
+            // 2) ET heure de disponibilité métier atteinte
+            boolean libreParTrajet = (heureRetourVehicule == null || heureRetourVehicule.compareTo(heureDepartGroupe) <= 0);
+            boolean libreParHoraire = (heureDispoVehicule == null || heureDispoVehicule.compareTo(heureDepartGroupe) <= 0);
+
+            if (libreParTrajet && libreParHoraire) {
                 disponibles.add(v);
             }
         }
@@ -557,23 +564,35 @@ public class PlanificationService {
             vp.setHeureDepart(finIntervalle); // Valeur par défaut, recalculée plus tard
 
             boolean vehiculeUtilise = false;
+            boolean premierChoix = true;
+            Integer lieuCourantId = aeroportId;
 
-            // Parcourir les réservations dans l'ordre original pour éviter la fragmentation excessive
-            for (Reservation r : reservationsGroupe) {
+            // Premier choix: ordre des réservations. Ensuite: plus proche de la dernière destination.
+            while (capaciteRestante > 0) {
+                Reservation r = premierChoix
+                        ? trouverPremiereReservationRestante(reservationsGroupe, remainingPax)
+                        : trouverReservationRestanteLaPlusProche(reservationsGroupe, remainingPax, lieuCourantId);
+
+                if (r == null) {
+                    break; // Plus aucun passager à placer
+                }
+
                 int besoin = remainingPax.get(r);
-                if (besoin <= 0) continue;
-
-                if (capaciteRestante <= 0) break; // Véhicule plein
-
                 int aPrendre = Math.min(besoin, capaciteRestante);
-                
+
                 // Ajouter cette portion au véhicule
                 tracking.assignees[reservations.indexOf(r)] = true; // Marquer temporairement
                 ajouterReservationAuPlanning(vp, r, aeroportId, delaiAttente, aPrendre);
-                
+
                 remainingPax.put(r, besoin - aPrendre);
                 capaciteRestante -= aPrendre;
                 vehiculeUtilise = true;
+                premierChoix = false;
+
+                Integer lieuHotelId = getLieuIdByHotelId(r.getHotel());
+                if (lieuHotelId != null) {
+                    lieuCourantId = lieuHotelId;
+                }
             }
 
             if (vehiculeUtilise) {
@@ -622,6 +641,51 @@ public class PlanificationService {
         }
         
         return groupe.getVehiculesAssignes();
+    }
+
+    /**
+     * Trouver la première réservation qui a encore des passagers à placer.
+     */
+    private Reservation trouverPremiereReservationRestante(List<Reservation> reservationsGroupe,
+                                                           Map<Reservation, Integer> remainingPax) {
+        for (Reservation r : reservationsGroupe) {
+            Integer reste = remainingPax.get(r);
+            if (reste != null && reste > 0) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Trouver la réservation restante la plus proche du lieu courant.
+     * En cas d'égalité de distance, la référence la plus petite est prioritaire.
+     */
+    private Reservation trouverReservationRestanteLaPlusProche(List<Reservation> reservationsGroupe,
+                                                               Map<Reservation, Integer> remainingPax,
+                                                               Integer lieuCourantId) {
+        Reservation meilleure = null;
+        double meilleureDistance = Double.MAX_VALUE;
+
+        for (Reservation r : reservationsGroupe) {
+            Integer reste = remainingPax.get(r);
+            if (reste == null || reste <= 0) {
+                continue;
+            }
+
+            Integer lieuHotelId = getLieuIdByHotelId(r.getHotel());
+            double dist = getDistance(lieuCourantId, lieuHotelId);
+
+            if (dist < meilleureDistance) {
+                meilleureDistance = dist;
+                meilleure = r;
+            } else if (dist == meilleureDistance && meilleure != null
+                    && r.getReference() < meilleure.getReference()) {
+                meilleure = r;
+            }
+        }
+
+        return meilleure;
     }
 
     /**

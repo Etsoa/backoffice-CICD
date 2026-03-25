@@ -23,6 +23,10 @@ TRUNCATE TABLE
 	parametre
 RESTART IDENTITY CASCADE;
 
+-- Assurer la présence du champ d'heure de disponibilité véhicule
+ALTER TABLE vehicule
+	ADD COLUMN IF NOT EXISTS heure_disponibilite TIME NOT NULL DEFAULT '00:00:00';
+
 -- ==============================================================================
 -- 2. CONFIGURATION ET RÉFÉRENTIELS
 -- ==============================================================================
@@ -55,9 +59,9 @@ INSERT INTO lieu (code, libelle) VALUES
 
 -- Distances entre l'aéroport (code TNR) et les lieux hôtels (codes COL/NOV/IBS)
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'COL'), 15.0),
-((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'NOV'), 12.0),
-((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'IBS'), 10.0);
+((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'COL'), 90.0),
+((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'NOV'), 35.0),
+((SELECT id FROM lieu WHERE code = 'COL'), (SELECT id FROM lieu WHERE code = 'NOV'), 60.0);
 
 -- ==============================================================================
 -- 3. VÉHICULES SPÉCIFIQUES DU SCÉNARIO SPRINT 7
@@ -66,9 +70,17 @@ INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
 --  - V1 : 8 places (Diesel - Prioritaire)
 --  - V2 : 3 places (Diesel)
 --
-INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES 
-('V1-SPRINT7', 8, (SELECT id FROM type_carburant WHERE code = 'D'), 60.0),
-('V2-SPRINT7', 3, (SELECT id FROM type_carburant WHERE code = 'D'), 60.0);
+INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES 
+('V1-SPRINT1', 5, (SELECT id FROM type_carburant WHERE code = 'D'), 50.0, '00:00:00'),
+('V2-SPRINT7', 5, (SELECT id FROM type_carburant WHERE code = 'Es'), 50.0, '00:00:00'),
+('V3-SPRINT7', 12, (SELECT id FROM type_carburant WHERE code = 'D'), 50.0, '00:00:00'),
+('V4-SPRINT7', 9, (SELECT id FROM type_carburant WHERE code = 'D'), 50.0, '00:00:00'),
+('V5-SPRINT7', 12, (SELECT id FROM type_carburant WHERE code = 'Es'), 50.0, '13:00:00');
+
+-- Update explicite: V5 ne devient disponible qu'à 13:00
+UPDATE vehicule
+SET heure_disponibilite = '13:00:00'
+WHERE reference = 'V5-SPRINT7';
 
 -- ==============================================================================
 -- 4. RÉSERVATIONS DU SCÉNARIO SPRINT 7
@@ -83,9 +95,12 @@ INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
 -- TOTAL     | 13 Personnes
 
 INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
-(7001, 6, '2026-05-01', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
-(7002, 4, '2026-05-01', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Novotel')), 
-(7003, 3, '2026-05-01', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Ibis')); 
+(7001, 7, '2026-03-19', '09:00:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
+(7002, 20, '2026-03-19', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Novotel')), 
+(7003, 3, '2026-03-19', '09:10:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
+(7004, 10, '2026-03-19', '09:15:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
+(7005, 5, '2026-03-19', '09:20:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
+(7006, 12, '2026-03-19', '13:30:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')); 
 
 -- ==============================================================================
 -- VÉRIFICATION DU RÉSULTAT ATTENDU
