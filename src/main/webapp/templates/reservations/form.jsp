@@ -135,6 +135,12 @@
                         </select>
                     </div>
 
+                    <div class="form-group">
+                        <label for="client"><i class="fas fa-user"></i> Nom du client</label>
+                        <input type="text" id="client" name="client" class="form-control" placeholder="Nom du client"
+                               value="<%= isEdit && reservation != null && reservation.getClient() != null ? reservation.getClient() : "" %>"/>
+                    </div>
+
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-<%= isEdit ? "save" : "plus" %>"></i> <%= isEdit ? "Mettre a jour" : "Creer" %>

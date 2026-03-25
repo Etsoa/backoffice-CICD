@@ -121,6 +121,9 @@ public class ReservationController {
             reservation.setDate(Date.valueOf(params.get("date").toString()));
             reservation.setHeure(Time.valueOf(params.get("heure").toString() + ":00"));
             reservation.setHotel(Integer.parseInt(params.get("hotel").toString()));
+            if (params.get("client") != null) {
+                reservation.setClient(params.get("client").toString());
+            }
 
             em.getTransaction().begin();
             em.persist(reservation);
@@ -152,6 +155,9 @@ public class ReservationController {
                 reservation.setDate(Date.valueOf(params.get("date").toString()));
                 reservation.setHeure(Time.valueOf(params.get("heure").toString() + ":00"));
                 reservation.setHotel(Integer.parseInt(params.get("hotel").toString()));
+                if (params.get("client") != null) {
+                    reservation.setClient(params.get("client").toString());
+                }
 
                 em.getTransaction().begin();
                 em.merge(reservation);

@@ -94,13 +94,13 @@ WHERE reference = 'V5-SPRINT7';
 -- -----------------------------------
 -- TOTAL     | 13 Personnes
 
-INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
-(7001, 7, '2026-03-19', '09:00:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
-(7002, 20, '2026-03-19', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Novotel')), 
-(7003, 3, '2026-03-19', '09:10:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
-(7004, 10, '2026-03-19', '09:15:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
-(7005, 5, '2026-03-19', '09:20:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')), 
-(7006, 12, '2026-03-19', '13:30:00', (SELECT id FROM hotel WHERE libelle = 'Colbert')); 
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
+(7001, 7, '2026-03-19', '09:00:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7001'), 
+(7002, 20, '2026-03-19', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Novotel'), 'client7002'), 
+(7003, 3, '2026-03-19', '09:10:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7003'), 
+(7004, 10, '2026-03-19', '09:15:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7004'), 
+(7005, 5, '2026-03-19', '09:20:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7005'), 
+(7006, 12, '2026-03-19', '13:30:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7006'); 
 
 -- ==============================================================================
 -- VÉRIFICATION DU RÉSULTAT ATTENDU

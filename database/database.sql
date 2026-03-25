@@ -92,24 +92,24 @@ INSERT INTO hotel (libelle) VALUES
 ('Lokanga');
 
 -- Initialisation des réservations (données de test couvrant tous les scénarios)
-INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
 -- === Date 2026-01-28 : Fenêtre temporelle + groupement ===
-(1001, 4, '2026-01-28', '07:00', 1),   -- 4 pers, Colbert à 07:00
-(1002, 3, '2026-01-28', '07:20', 2),   -- 3 pers, Novotel à 07:20 (dans fenêtre 07:00+30min → groupement possible)
-(1003, 2, '2026-01-28', '07:45', 3),   -- 2 pers, Ibis à 07:45 (hors fenêtre → nouveau véhicule)
-(1004, 11, '2026-01-28', '15:00', 4),  -- 11 pers, Lokanga à 15:00 (gros véhicule nécessaire)
+(1001, 4, '2026-01-28', '07:00', 1, 'client1001'),   -- 4 pers, Colbert à 07:00
+(1002, 3, '2026-01-28', '07:20', 2, 'client1002'),   -- 3 pers, Novotel à 07:20 (dans fenêtre 07:00+30min → groupement possible)
+(1003, 2, '2026-01-28', '07:45', 3, 'client1003'),   -- 2 pers, Ibis à 07:45 (hors fenêtre → nouveau véhicule)
+(1004, 11, '2026-01-28', '15:00', 4, 'client1004'),  -- 11 pers, Lokanga à 15:00 (gros véhicule nécessaire)
 
 -- === Date 2026-02-05 : Même heure + multi-hôtels + dépassement capacité ===
-(2001, 3, '2026-02-05', '10:00', 1),   -- 3 pers, Colbert à 10:00
-(2002, 1, '2026-02-05', '10:00', 4),   -- 1 pers, Lokanga à 10:00 (même heure, groupement avec 2001)
-(2003, 2, '2026-02-05', '10:15', 3),   -- 2 pers, Ibis à 10:15 (dans fenêtre, total cumulé 3+1+2=6)
-(2004, 4, '2026-02-05', '10:25', 2),   -- 4 pers, Novotel à 10:25 (dans fenêtre, 6+4=10 → dépasse → nouveau véhicule)
-(2005, 7, '2026-02-05', '18:30', 1),   -- 7 pers, Colbert à 18:30 (fenêtre isolée, véhicule 8 places Diesel)
+(2001, 3, '2026-02-05', '10:00', 1, 'client2001'),   -- 3 pers, Colbert à 10:00
+(2002, 1, '2026-02-05', '10:00', 4, 'client2002'),   -- 1 pers, Lokanga à 10:00 (même heure, groupement avec 2001)
+(2003, 2, '2026-02-05', '10:15', 3, 'client2003'),   -- 2 pers, Ibis à 10:15 (dans fenêtre, total cumulé 3+1+2=6)
+(2004, 4, '2026-02-05', '10:25', 2, 'client2004'),   -- 4 pers, Novotel à 10:25 (dans fenêtre, 6+4=10 → dépasse → nouveau véhicule)
+(2005, 7, '2026-02-05', '18:30', 1, 'client2005'),   -- 7 pers, Colbert à 18:30 (fenêtre isolée, véhicule 8 places Diesel)
 
 -- === Date 2026-02-09 : Véhicule seul + priorité Diesel + proximité ===
-(3001, 2, '2026-02-09', '08:30', 2),   -- 2 pers, Novotel à 08:30 (seul → petit véhicule)
-(3002, 5, '2026-02-09', '14:00', 1),   -- 5 pers, Colbert à 14:00
-(3003, 4, '2026-02-09', '14:10', 3);   -- 4 pers, Ibis à 14:10 (dans fenêtre, 5+4=9 → dépasse 5 places → nouveau véhicule)
+(3001, 2, '2026-02-09', '08:30', 2, 'client3001'),   -- 2 pers, Novotel à 08:30 (seul → petit véhicule)
+(3002, 5, '2026-02-09', '14:00', 1, 'client3002'),   -- 5 pers, Colbert à 14:00
+(3003, 4, '2026-02-09', '14:10', 3, 'client3003');   -- 4 pers, Ibis à 14:10 (dans fenêtre, 5+4=9 → dépasse 5 places → nouveau véhicule)
 
 -- Initialisation des lieux
 INSERT INTO lieu (code, libelle) VALUES

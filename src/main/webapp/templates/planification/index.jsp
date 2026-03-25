@@ -225,6 +225,7 @@
                                             <th>Ordre</th>
                                             <th>Référence</th>
                                             <th>Hôtel</th>
+                                            <th>Client</th>
                                             <th>Personnes</th>
                                             <th>Heure RDV</th>
                                             <th>Départ segment</th>
@@ -239,6 +240,7 @@
                                             <td><%= ordre++ %></td>
                                             <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
                                             <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
+                                            <td><%= resPlanning.getReservation().getClient() != null ? resPlanning.getReservation().getClient() : "" %></td>
                                             <td><%= resPlanning.getNombrePassagers() %></td>
                                             <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>
                                             <td class="td-time"><%= resPlanning.getHeureDepart() %></td>

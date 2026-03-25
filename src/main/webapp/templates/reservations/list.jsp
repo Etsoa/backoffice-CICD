@@ -177,6 +177,7 @@
                         <th>Date</th>
                         <th>Heure</th>
                         <th>Hotel</th>
+                        <th>Client</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -195,6 +196,7 @@
                         <td><%= r.getDate() %></td>
                         <td><%= r.getHeure() %></td>
                         <td><%= hotelName %></td>
+                        <td><%= r.getClient() != null ? r.getClient() : "" %></td>
                         <td class="actions-cell">
                             <a href="${pageContext.request.contextPath}/reservations/edit?id=<%= r.getId() %>" class="btn btn-warning btn-sm">
                                 <i class="fas fa-edit"></i>

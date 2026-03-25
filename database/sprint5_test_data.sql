@@ -48,19 +48,19 @@ DELETE FROM reservation WHERE reference >= 5000;
 --   - Heure de départ : 11:25
 --   - Véhicule : VH-2026-002 (8 pl, Diesel)
 
-INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
 -- Groupe 1 : 15 personnes -> 2 véhicules, départ commun 07:20
-(8001, 6, '2026-03-18', '07:00', 1),   -- 6 pers, Colbert
-(8002, 5, '2026-03-18', '07:10', 2),   -- 5 pers, Novotel
-(8003, 4, '2026-03-18', '07:20', 3),   -- 4 pers, Ibis
+(8001, 6, '2026-03-18', '07:00', 1, 'client8001'),   -- 6 pers, Colbert
+(8002, 5, '2026-03-18', '07:10', 2, 'client8002'),   -- 5 pers, Novotel
+(8003, 4, '2026-03-18', '07:20', 3, 'client8003'),   -- 4 pers, Ibis
 
 -- Groupe 2 : 5 personnes -> 1 véhicule
-(8004, 3, '2026-03-18', '09:00', 4),   -- 3 pers, Lokanga
-(8005, 2, '2026-03-18', '09:15', 1),   -- 2 pers, Colbert
+(8004, 3, '2026-03-18', '09:00', 4, 'client8004'),   -- 3 pers, Lokanga
+(8005, 2, '2026-03-18', '09:15', 1, 'client8005'),   -- 2 pers, Colbert
 
 -- Groupe 3 : 7 personnes -> 1 véhicule
-(8006, 4, '2026-03-18', '11:00', 2),   -- 4 pers, Novotel
-(8007, 3, '2026-03-18', '11:25', 3);   -- 3 pers, Ibis
+(8006, 4, '2026-03-18', '11:00', 2, 'client8006'),   -- 4 pers, Novotel
+(8007, 3, '2026-03-18', '11:25', 3, 'client8007');   -- 3 pers, Ibis
 
 -- ============================================================================
 -- SCÉNARIO 2 : Date 2026-03-19
@@ -69,10 +69,10 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 -- Le plus gros véhicule = 18 places, donc 25 personnes = OBLIGÉ d'avoir 2 véhicules
 -- Les 2 véhicules partent à la même heure !
 
-INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
-(9001, 10, '2026-03-19', '08:00', 1),   -- 10 pers, Colbert
-(9002, 8, '2026-03-19', '08:15', 2),    -- 8 pers, Novotel
-(9003, 7, '2026-03-19', '08:25', 3);    -- 7 pers, Ibis
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
+(9001, 10, '2026-03-19', '08:00', 1, 'client9001'),   -- 10 pers, Colbert
+(9002, 8, '2026-03-19', '08:15', 2, 'client9002'),    -- 8 pers, Novotel
+(9003, 7, '2026-03-19', '08:25', 3, 'client9003');    -- 7 pers, Ibis
 -- Total : 25 personnes dans l'intervalle 08:00-08:30
 -- Départ commun : 08:25
 -- Véhicule 1 : VH-2026-006 (18 pl) avec 18 pers (9001 + 9002)
@@ -84,12 +84,12 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 -- Test avec 2 groupes, dont un avec 3 véhicules (30+ personnes)
 -- ============================================================================
 
-INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
 -- Groupe 1 (07:00-07:30) : 35 personnes -> 3 véhicules !
-(9101, 12, '2026-03-20', '07:00', 1),   -- 12 pers, Colbert
-(9102, 11, '2026-03-20', '07:10', 2),   -- 11 pers, Novotel
-(9103, 8, '2026-03-20', '07:20', 3),    -- 8 pers, Ibis
-(9104, 4, '2026-03-20', '07:25', 4),    -- 4 pers, Lokanga
+(9101, 12, '2026-03-20', '07:00', 1, 'client9101'),   -- 12 pers, Colbert
+(9102, 11, '2026-03-20', '07:10', 2, 'client9102'),   -- 11 pers, Novotel
+(9103, 8, '2026-03-20', '07:20', 3, 'client9103'),    -- 8 pers, Ibis
+(9104, 4, '2026-03-20', '07:25', 4, 'client9104'),    -- 4 pers, Lokanga
 -- Total : 35 personnes
 -- Véhicule 1 : VH-2026-006 (18 pl)
 -- Véhicule 2 : VH-2026-004 (12 pl)
@@ -97,21 +97,21 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
 -- TOUS PARTENT À 07:25 !
 
 -- Groupe 2 (10:00-10:30) : 6 personnes -> 1 véhicule
-(9105, 3, '2026-03-20', '10:00', 1),    -- 3 pers, Colbert
-(9106, 3, '2026-03-20', '10:20', 2);    -- 3 pers, Novotel
+(9105, 3, '2026-03-20', '10:00', 1, 'client9105'),    -- 3 pers, Colbert
+(9106, 3, '2026-03-20', '10:20', 2, 'client9106');    -- 3 pers, Novotel
 
 
 --  testez avec 2026-03-19 ou 2026-03-20 pour voir plusieurs véhicules dans le même groupe, tous partant à la même heure
-INSERT INTO reservation (reference, nombre, date, heure, hotel) VALUES
-(9001, 10, '2026-03-19', '08:00', 1),
-(9002, 8, '2026-03-19', '08:15', 2),
-(9003, 7, '2026-03-19', '08:25', 3),
-(9101, 12, '2026-03-20', '07:00', 1),
-(9102, 11, '2026-03-20', '07:10', 2),
-(9103, 8, '2026-03-20', '07:20', 3),
-(9104, 4, '2026-03-20', '07:25', 4),
-(9105, 3, '2026-03-20', '10:00', 1),
-(9106, 3, '2026-03-20', '10:20', 2);
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
+(9001, 10, '2026-03-19', '08:00', 1, 'client9001'),
+(9002, 8, '2026-03-19', '08:15', 2, 'client9002'),
+(9003, 7, '2026-03-19', '08:25', 3, 'client9003'),
+(9101, 12, '2026-03-20', '07:00', 1, 'client9101'),
+(9102, 11, '2026-03-20', '07:10', 2, 'client9102'),
+(9103, 8, '2026-03-20', '07:20', 3, 'client9103'),
+(9104, 4, '2026-03-20', '07:25', 4, 'client9104'),
+(9105, 3, '2026-03-20', '10:00', 1, 'client9105'),
+(9106, 3, '2026-03-20', '10:20', 2, 'client9106');
 -- ============================================================================
 -- Configuration du temps d'attente
 -- ============================================================================
