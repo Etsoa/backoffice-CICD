@@ -27,29 +27,33 @@ public class VehiculeController {
         ModelView mv = new ModelView("vehicules/list.jsp");
 
         try {
-            List<Vehicule> vehicules;            
+            List<Vehicule> vehicules;
             // Filtre par disponibilité (date + heure)
             boolean filtreDispoActif = false;
             if (params != null && params.get("dispoDate") != null && !params.get("dispoDate").toString().isEmpty()
-                && params.get("dispoHeure") != null && !params.get("dispoHeure").toString().isEmpty()) {
+                    && params.get("dispoHeure") != null && !params.get("dispoHeure").toString().isEmpty()) {
                 try {
                     Date date = Date.valueOf(params.get("dispoDate").toString());
                     String heureStr = params.get("dispoHeure").toString();
-                    if (!heureStr.contains(":")) heureStr += ":00";
-                    if (heureStr.split(":").length == 2) heureStr += ":00";
+                    if (!heureStr.contains(":"))
+                        heureStr += ":00";
+                    if (heureStr.split(":").length == 2)
+                        heureStr += ":00";
                     Time heure = Time.valueOf(heureStr);
-                    
+
                     vehicules = planificationService.getVehiculesDisponibles(date, heure);
                     mv.addItem("dispoDate", params.get("dispoDate").toString());
                     mv.addItem("dispoHeure", params.get("dispoHeure").toString());
                     filtreDispoActif = true;
                 } catch (Exception e) {
-                    vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class).getResultList();
+                    vehicules = em.createQuery("SELECT v FROM Vehicule v ORDER BY v.reference", Vehicule.class)
+                            .getResultList();
                     mv.addItem("message", "Erreur: Format date/heure invalide");
                 }
             }
             // Filtre par type de carburant
-            else if (params != null && params.get("typeCarburant") != null && !params.get("typeCarburant").toString().isEmpty()) {
+            else if (params != null && params.get("typeCarburant") != null
+                    && !params.get("typeCarburant").toString().isEmpty()) {
                 Integer typeId = Integer.parseInt(params.get("typeCarburant").toString());
                 vehicules = em.createQuery(
                         "SELECT v FROM Vehicule v WHERE v.typeCarburant.id = :typeId ORDER BY v.reference",
@@ -111,6 +115,22 @@ public class VehiculeController {
             vehicule.setPlace(Integer.parseInt(params.get("place").toString()));
             vehicule.setVitesseMoyenne(Double.parseDouble(params.get("vitesseMoyenne").toString()));
 
+            // Gestion de l'heure de disponibilité
+            if (params.get("heureDisponibilite") != null && !params.get("heureDisponibilite").toString().isEmpty()) {
+                String heureStr = params.get("heureDisponibilite").toString();
+                if (!heureStr.contains(":"))
+                    heureStr += ":00"; // Ajoute les minutes si absentes
+                if (heureStr.split(":").length == 2)
+                    heureStr += ":00"; // Ajoute les secondes si absentes
+                try {
+                    vehicule.setHeureDisponibilite(Time.valueOf(heureStr));
+                } catch (Exception e) {
+                    vehicule.setHeureDisponibilite(Time.valueOf("00:00:00"));
+                }
+            } else {
+                vehicule.setHeureDisponibilite(Time.valueOf("00:00:00"));
+            }
+
             Integer typeId = Integer.parseInt(params.get("typeCarburant").toString());
             TypeCarburant type = em.find(TypeCarburant.class, typeId);
             vehicule.setTypeCarburant(type);
@@ -142,6 +162,22 @@ public class VehiculeController {
             vehicule.setReference(params.get("reference").toString());
             vehicule.setPlace(Integer.parseInt(params.get("place").toString()));
             vehicule.setVitesseMoyenne(Double.parseDouble(params.get("vitesseMoyenne").toString()));
+
+            // Gestion de l'heure de disponibilité
+            if (params.get("heureDisponibilite") != null && !params.get("heureDisponibilite").toString().isEmpty()) {
+                String heureStr = params.get("heureDisponibilite").toString();
+                if (!heureStr.contains(":"))
+                    heureStr += ":00";
+                if (heureStr.split(":").length == 2)
+                    heureStr += ":00";
+                try {
+                    vehicule.setHeureDisponibilite(Time.valueOf(heureStr));
+                } catch (Exception e) {
+                    vehicule.setHeureDisponibilite(Time.valueOf("00:00:00"));
+                }
+            } else {
+                vehicule.setHeureDisponibilite(Time.valueOf("00:00:00"));
+            }
 
             Integer typeId = Integer.parseInt(params.get("typeCarburant").toString());
             TypeCarburant type = em.find(TypeCarburant.class, typeId);

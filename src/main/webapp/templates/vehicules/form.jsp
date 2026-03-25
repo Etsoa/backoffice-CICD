@@ -132,6 +132,12 @@
                         <input type="number" id="vitesseMoyenne" name="vitesseMoyenne" class="form-control" min="1" max="200" step="0.01" required placeholder="ex: 60"
                                value="<%= isEdit && vehicule != null ? vehicule.getVitesseMoyenne() : "60.0" %>"/>
                     </div>
+					
+					<div class="form-group">
+                        <label for="heureDisponibilite"><i class="fas fa-clock"></i> Heure Disponibilité (HH:MM)</label>
+                        <input type="time" id="heureDisponibilite" name="heureDisponibilite" class="form-control"
+                               value="<%= (isEdit && vehicule != null && vehicule.getHeureDisponibilite() != null) ? vehicule.getHeureDisponibilite().toString() : "00:00:00" %>"/>
+                    </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">

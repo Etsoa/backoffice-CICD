@@ -203,6 +203,7 @@
                         <th>Places</th>
                         <th>Type carburant</th>
                         <th>Vitesse moy.</th>
+                        <th>Disponibilité</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -221,6 +222,7 @@
                             </span>
                         </td>
                         <td><%= String.format("%.0f", v.getVitesseMoyenne()) %> km/h</td>
+                        <td><%= (v.getHeureDisponibilite() != null) ? v.getHeureDisponibilite() : "00:00:00" %></td>
                         <td class="actions-cell">
                             <a href="${pageContext.request.contextPath}/vehicules/edit?id=<%= v.getId() %>" class="btn btn-warning btn-sm">
                                 <i class="fas fa-edit"></i>
