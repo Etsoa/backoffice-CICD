@@ -43,11 +43,11 @@ INSERT INTO hotel (libelle) VALUES
 -- Véhicules
 -- ============================================
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES
-('vehicule1', 5, 1, 60.00, '09:00:00'),    -- Diesel, disponible à 09:00
-('vehicule2', 5, 2, 60.00, '09:00:00'),    -- Essence, disponible à 09:00
-('vehicule3', 12, 1, 60.00, '07:00:00'),   -- Diesel, disponible à 07:00
-('vehicule4', 9, 1, 60.00, '09:00:00'),    -- Diesel, disponible à 09:00
-('vehicule5', 12, 2, 60.00, '13:00:00');   -- Essence, disponible à 13:00
+('vehicule1', 5, 1, 50.00, '09:00:00'),    -- Diesel, disponible à 09:00
+('vehicule2', 5, 2, 50.00, '09:00:00'),    -- Essence, disponible à 09:00
+('vehicule3', 12, 1, 50.00, '07:00:00'),   -- Diesel, disponible à 07:00
+('vehicule4', 9, 1, 50.00, '09:00:00'),    -- Diesel, disponible à 09:00
+('vehicule5', 12, 2, 50.00, '13:00:00');   -- Essence, disponible à 13:00
 
 -- ============================================
 -- Distances entre lieux
@@ -83,7 +83,4 @@ INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VA
 -- ============================================
 -- Paramètres globaux
 -- ============================================
-INSERT INTO parametre (cle, valeur, description) VALUES
-('delai_attente', '30', 'Délai d''attente en minutes pour le regroupement des réservations'),
-('vitesse_moyenne', '60', 'Vitesse moyenne des véhicules en km/h'),
-('temps_service_hotel', '30', 'Temps de service par hôtel en minutes');
+-- (Les paramètres sont récupérés depuis configuration_attente pour le délai d'attente)

@@ -2,7 +2,9 @@ package com.backoffice.dto;
 
 import java.sql.Time;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.backoffice.models.Reservation;
 
@@ -24,11 +26,14 @@ public class RegroupementDTO {
     private List<Reservation> reservations;
     private List<VehiculePlanningDTO> vehiculesAssignes;
     private List<Reservation> reservationsNonAssignees; // Réservations sans véhicule disponible
+    private Map<Integer, Integer> passagersReportesParReservation; // Nombre de passagers reportés par réservation ID
+    private int nombreReservationsReportees; // Nombre de réservations reportées au début de la liste
 
     public RegroupementDTO() {
         this.reservations = new ArrayList<>();
         this.vehiculesAssignes = new ArrayList<>();
         this.reservationsNonAssignees = new ArrayList<>();
+        this.passagersReportesParReservation = new HashMap<>();
     }
 
     public RegroupementDTO(int numeroGroupe, Time heureDebut, Time heureFin, int delaiAttenteMinutes) {
@@ -161,6 +166,14 @@ public class RegroupementDTO {
 
         // Ajouter à la liste des non assignées
         this.reservationsNonAssignees.add(resa);
+    }
+
+    public int getNombreReservationsReportees() {
+        return nombreReservationsReportees;
+    }
+
+    public void setNombreReservationsReportees(int nombreReservationsReportees) {
+        this.nombreReservationsReportees = nombreReservationsReportees;
     }
 
     public boolean hasReservationsNonAssignees() {
