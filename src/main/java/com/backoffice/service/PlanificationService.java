@@ -590,6 +590,7 @@ public class PlanificationService {
             // 1) jamais utilisé (null) OU revenant avant le départ du groupe (+ délai)
             // 2) ET heure de disponibilité métier atteinte
             boolean libreParTrajet = (heureRetourVehicule == null || heureRetourVehicule.compareTo(heureLimite) <= 0);
+            // Sécurité: vérifier que heureDispoVehicule n'est pas null avant de l'utiliser
             boolean libreParHoraire = (heureDispoVehicule == null || heureDispoVehicule.compareTo(heureLimite) <= 0);
 
             if (libreParTrajet && libreParHoraire) {
@@ -906,14 +907,6 @@ public class PlanificationService {
         }
 
         return nonAssignees;
-    }
-
-    /**
-     * Ajouter une réservation au planning d'un véhicule
-     */
-    private void ajouterReservationAuPlanning(VehiculePlanningDTO vehiculePlanning,
-            Reservation resa, Integer aeroportId, int delaiAttente) {
-        ajouterReservationAuPlanning(vehiculePlanning, resa, aeroportId, delaiAttente, resa.getNombre());
     }
 
     /**
@@ -1467,8 +1460,12 @@ public class PlanificationService {
         assignation.setHeureRetourAeroport(vpDTO.getHeureRetourAeroport());
         assignation.setDistanceTotaleKm(vpDTO.getDistanceTotale());
 
-        // Calculer le temps total en minutes
-        int timeMinutes = (int) (vpDTO.getDistanceTotale() / vpDTO.getVehicule().getVitesseMoyenne() * 60);
+        // Calculer le temps total en minutes (avec vérification de division par zéro)
+        int timeMinutes = 0;
+        if (vpDTO.getVehicule() != null && vpDTO.getVehicule().getVitesseMoyenne() != null 
+                && vpDTO.getVehicule().getVitesseMoyenne() > 0) {
+            timeMinutes = (int) (vpDTO.getDistanceTotale() / vpDTO.getVehicule().getVitesseMoyenne() * 60);
+        }
         assignation.setTempsTotalMinutes(timeMinutes);
         assignation.setNombrePassagersTransportes(vpDTO.getNombrePassagers());
 
@@ -1585,13 +1582,17 @@ public class PlanificationService {
                 VehiculeStats stat = stats.computeIfAbsent(vehiculeId, k -> new VehiculeStats());
 
                 stat.nombreGroupes++;
-                stat.totalPassagers += vp.getNombrePassagers();
-                stat.totalDistance += vp.getDistanceTotale();
+                if (vp.getNombrePassagers() != null) {
+                    stat.totalPassagers += vp.getNombrePassagers();
+                }
+                if (vp.getDistanceTotale() != null) {
+                    stat.totalDistance += vp.getDistanceTotale();
+                }
 
-                if (stat.heureDepart == null || vp.getHeureDepart().before(stat.heureDepart)) {
+                if (vp.getHeureDepart() != null && (stat.heureDepart == null || vp.getHeureDepart().before(stat.heureDepart))) {
                     stat.heureDepart = vp.getHeureDepart();
                 }
-                if (stat.heureRetour == null || vp.getHeureRetourAeroport().after(stat.heureRetour)) {
+                if (vp.getHeureRetourAeroport() != null && (stat.heureRetour == null || vp.getHeureRetourAeroport().after(stat.heureRetour))) {
                     stat.heureRetour = vp.getHeureRetourAeroport();
                 }
             }

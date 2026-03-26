@@ -34,6 +34,9 @@ public class Reservation {
     @Column(name = "hotel", nullable = false)
     private Integer hotel;
 
+    @Column(name = "client")
+    private String client;
+
     public Reservation() {
     }
 
@@ -92,5 +95,13 @@ public class Reservation {
 
     public void setHotel(Integer hotel) {
         this.hotel = hotel;
+    }
+
+    public String getClient() {
+        return client;
+    }
+
+    public void setClient(String client) {
+        this.client = client;
     }
 }

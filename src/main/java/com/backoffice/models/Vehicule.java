@@ -1,5 +1,7 @@
 package com.backoffice.models;
 
+import java.sql.Time;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -30,6 +32,9 @@ public class Vehicule {
 
     @Column(name = "vitesse_moyenne", nullable = false, columnDefinition = "DECIMAL(5,2)")
     private Double vitesseMoyenne; // en km/h
+
+    @Column(name = "heure_disponibilite", nullable = false)
+    private Time heureDisponibilite;
 
     public Vehicule() {
     }
@@ -72,5 +77,13 @@ public class Vehicule {
 
     public void setVitesseMoyenne(Double vitesseMoyenne) {
         this.vitesseMoyenne = vitesseMoyenne;
+    }
+
+    public Time getHeureDisponibilite() {
+        return heureDisponibilite;
+    }
+
+    public void setHeureDisponibilite(Time heureDisponibilite) {
+        this.heureDisponibilite = heureDisponibilite;
     }
 }

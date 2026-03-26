@@ -9,6 +9,7 @@ public class ReservationDTO {
     private String date;  // Format: yyyy-MM-dd
     private String heure; // Format: HH:mm:ss
     private Integer hotel;
+    private String client;
 
     public ReservationDTO() {
     }
@@ -20,6 +21,7 @@ public class ReservationDTO {
         this.date = reservation.getDate() != null ? reservation.getDate().toString() : null;
         this.heure = reservation.getHeure() != null ? reservation.getHeure().toString() : null;
         this.hotel = reservation.getHotel();
+        this.client = reservation.getClient();
     }
 
     public Integer getId() {
@@ -68,5 +70,13 @@ public class ReservationDTO {
 
     public void setHotel(Integer hotel) {
         this.hotel = hotel;
+    }
+
+    public String getClient() {
+        return client;
+    }
+
+    public void setClient(String client) {
+        this.client = client;
     }
 }
