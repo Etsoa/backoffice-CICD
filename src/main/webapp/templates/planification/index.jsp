@@ -215,6 +215,10 @@
                                         <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
                                         <span><%= vehiculePlanning.getDestinationString() %></span>
                                         <span><%= String.format("%.1f", vehiculePlanning.getDistanceTotale()) %> km</span>
+                                        <span style="color: #059669; font-weight: 600;">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            <%= String.format("%.0f", vehiculePlanning.getDistanceTotale() / vehiculePlanning.getVehicule().getVitesseMoyenne() * 60) %> min
+                                        </span>
                                     </div>
                                     <span class="vh-count"><%= vehiculePlanning.getReservations().size() %> résa(s)</span>
                                 </div>
@@ -224,6 +228,7 @@
                                         <tr>
                                             <th>Ordre</th>
                                             <th>Référence</th>
+                                            <th>Client</th>
                                             <th>Hôtel</th>
                                             <th>Personnes</th>
                                             <th>Heure RDV</th>
@@ -238,6 +243,7 @@
                                         <tr>
                                             <td><%= ordre++ %></td>
                                             <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
+                                            <td style="color: #7c3aed; font-weight: 600;"><%= resPlanning.getReservation().getClient() %></td>
                                             <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
                                             <td><%= resPlanning.getNombrePassagers() %></td>
                                             <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>

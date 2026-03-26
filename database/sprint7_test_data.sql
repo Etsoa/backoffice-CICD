@@ -36,8 +36,8 @@ INSERT INTO lieu (code, libelle) VALUES
 -- ============================================
 INSERT INTO hotel (libelle) VALUES
 ('Aeroport Ivato'),
-('hotel1'),
-('hotel2');
+('Hotel 1'),
+('Hotel 2');
 
 -- ============================================
 -- Véhicules
@@ -53,26 +53,26 @@ INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_d
 -- Distances entre lieux
 -- ============================================
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
--- From Aeroport Ivato (TNR)
-(1, 2, 90.00),      -- TNR to Hotel1
-(1, 3, 35.00),      -- TNR to Hotel2
+-- From Aeroport Ivato (TNR) to hotels
+(1, 2, 90.00),      -- TNR to Hotel 1
+(1, 3, 35.00),      -- TNR to Hotel 2
 -- Between hotels
-(2, 3, 60.00),      -- Hotel1 to Hotel2
-(3, 2, 60.00),      -- Hotel2 to Hotel1
+(2, 3, 60.00),      -- Hotel 1 to Hotel 2
+(3, 2, 60.00),      -- Hotel 2 to Hotel 1
 -- Return paths
-(2, 1, 90.00),      -- Hotel1 to TNR
-(3, 1, 35.00);      -- Hotel2 to TNR
+(2, 1, 90.00),      -- Hotel 1 to TNR
+(3, 1, 35.00);      -- Hotel 2 to TNR
 
 -- ============================================
 -- Réservations (2026-03-19)
 -- ============================================
 INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
-(1, 7, '2026-03-19', '09:00:00', 1, 'C001'),
-(2, 20, '2026-03-19', '08:00:00', 1, 'C002'),
-(3, 3, '2026-03-19', '09:10:00', 1, 'C003'),
-(4, 10, '2026-03-19', '09:15:00', 1, 'C004'),
-(5, 5, '2026-03-19', '09:20:00', 1, 'C005'),
-(6, 12, '2026-03-19', '13:30:00', 1, 'C006');
+(1, 7, '2026-03-19', '09:00:00', 2, 'C001'),
+(2, 20, '2026-03-19', '08:00:00', 3, 'C002'),
+(3, 3, '2026-03-19', '09:10:00', 2, 'C003'),
+(4, 10, '2026-03-19', '09:15:00', 2, 'C004'),
+(5, 5, '2026-03-19', '09:20:00', 2, 'C005'),
+(6, 12, '2026-03-19', '13:30:00', 2, 'C006');
 
 -- ============================================
 -- Configuration du délai d'attente (Sprint 5)
