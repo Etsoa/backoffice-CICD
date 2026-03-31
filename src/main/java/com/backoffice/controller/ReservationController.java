@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.backoffice.dto.ReservationDTO;
+import com.backoffice.models.Client;
 import com.backoffice.models.Hotel;
 import com.backoffice.models.Reservation;
 import com.backoffice.util.JPAUtil;
@@ -84,7 +85,10 @@ public class ReservationController {
         try {
             List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h ORDER BY h.libelle", Hotel.class)
                     .getResultList();
+            List<Client> clients = em.createQuery("SELECT c FROM Client c ORDER BY c.nom, c.prenom", Client.class)
+                    .getResultList();
             mv.addItem("hotels", hotels);
+            mv.addItem("clients", clients);
         } finally {
             em.close();
         }
@@ -100,8 +104,11 @@ public class ReservationController {
             Reservation reservation = em.find(Reservation.class, id);
             List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h ORDER BY h.libelle", Hotel.class)
                     .getResultList();
+            List<Client> clients = em.createQuery("SELECT c FROM Client c ORDER BY c.nom, c.prenom", Client.class)
+                    .getResultList();
             mv.addItem("reservation", reservation);
             mv.addItem("hotels", hotels);
+            mv.addItem("clients", clients);
             mv.addItem("editMode", true);
         } finally {
             em.close();
@@ -121,6 +128,9 @@ public class ReservationController {
             reservation.setDate(Date.valueOf(params.get("date").toString()));
             reservation.setHeure(Time.valueOf(params.get("heure").toString() + ":00"));
             reservation.setHotel(Integer.parseInt(params.get("hotel").toString()));
+            if (params.get("client") != null && !params.get("client").toString().isEmpty()) {
+                reservation.setClient(params.get("client").toString());
+            }
 
             em.getTransaction().begin();
             em.persist(reservation);
@@ -152,6 +162,9 @@ public class ReservationController {
                 reservation.setDate(Date.valueOf(params.get("date").toString()));
                 reservation.setHeure(Time.valueOf(params.get("heure").toString() + ":00"));
                 reservation.setHotel(Integer.parseInt(params.get("hotel").toString()));
+                if (params.get("client") != null && !params.get("client").toString().isEmpty()) {
+                    reservation.setClient(params.get("client").toString());
+                }
 
                 em.getTransaction().begin();
                 em.merge(reservation);
@@ -205,10 +218,14 @@ public class ReservationController {
                     .createQuery("SELECT r FROM Reservation r ORDER BY r.date DESC, r.heure ASC", Reservation.class)
                     .getResultList();
             List<Hotel> hotels = em.createQuery("SELECT h FROM Hotel h", Hotel.class).getResultList();
+            List<Client> clients = em.createQuery("SELECT c FROM Client c", Client.class).getResultList();
             Map<Integer, String> hotelMap = hotels.stream()
                     .collect(Collectors.toMap(Hotel::getId, Hotel::getLibelle));
+            Map<String, String> clientMap = clients.stream()
+                    .collect(Collectors.toMap(Client::getIdClient, c -> c.getPrenom() + " " + c.getNom()));
             mv.addItem("reservations", reservations);
             mv.addItem("hotelMap", hotelMap);
+            mv.addItem("clientMap", clientMap);
         } finally {
             em.close();
         }

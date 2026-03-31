@@ -160,6 +160,7 @@
         <%
             List<Reservation> reservations = (List<Reservation>) request.getAttribute("reservations");
             Map<Integer, String> hotelMap = (Map<Integer, String>) request.getAttribute("hotelMap");
+            Map<String, String> clientMap = (Map<String, String>) request.getAttribute("clientMap");
         %>
 
         <div class="stats-bar">
@@ -177,6 +178,7 @@
                         <th>Date</th>
                         <th>Heure</th>
                         <th>Hotel</th>
+                        <th>Client</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -195,6 +197,16 @@
                         <td><%= r.getDate() %></td>
                         <td><%= r.getHeure() %></td>
                         <td><%= hotelName %></td>
+                        <td><% 
+                            if (r.getClient() != null && !r.getClient().isEmpty()) {
+                                String clientName = clientMap != null && clientMap.get(r.getClient()) != null
+                                    ? clientMap.get(r.getClient())
+                                    : r.getClient();
+                        %><%= clientName %><% 
+                            } else { 
+                                %><span style="color: #cbd5e1;">--</span><%
+                            }
+                        %></td>
                         <td class="actions-cell">
                             <a href="${pageContext.request.contextPath}/reservations/edit?id=<%= r.getId() %>" class="btn btn-warning btn-sm">
                                 <i class="fas fa-edit"></i>
