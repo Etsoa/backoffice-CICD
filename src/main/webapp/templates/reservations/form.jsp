@@ -1,12 +1,14 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
 <%@ page import="com.backoffice.models.Hotel" %>
+<%@ page import="com.backoffice.models.Client" %>
 <%@ page import="com.backoffice.models.Reservation" %>
 <%
     Boolean editMode = (Boolean) request.getAttribute("editMode");
     boolean isEdit = editMode != null && editMode;
     Reservation reservation = (Reservation) request.getAttribute("reservation");
     List<Hotel> hotels = (List<Hotel>) request.getAttribute("hotels");
+    List<Client> clients = (List<Client>) request.getAttribute("clients");
 %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -131,6 +133,20 @@
                                     boolean selected = isEdit && reservation != null && reservation.getHotel() == h.getId();
                             %>
                             <option value="<%= h.getId() %>" <%= selected ? "selected" : "" %>><%= h.getLibelle() %></option>
+                            <% }} %>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client"><i class="fas fa-user"></i> Client</label>
+                        <select id="client" name="client" class="form-control">
+                            <option value="">-- Selectionner un client --</option>
+                            <% if (clients != null) {
+                                for (Client c : clients) {
+                                    boolean selected = isEdit && reservation != null && reservation.getClient() != null && 
+                                                       reservation.getClient().equals(c.getIdClient());
+                            %>
+                            <option value="<%= c.getIdClient() %>" <%= selected ? "selected" : "" %>><%= c.getPrenom() %> <%= c.getNom() %> (<%= c.getIdClient() %>)</option>
                             <% }} %>
                         </select>
                     </div>

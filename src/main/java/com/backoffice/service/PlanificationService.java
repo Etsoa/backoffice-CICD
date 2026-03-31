@@ -378,7 +378,8 @@ public class PlanificationService {
      * Ajouter TOUTES les réservations qui tombent dans l'intervalle [debut,
      * debut+delaiAttente].
      * 
-     * @param heureDepartGroupe L'heure de départ du groupe (calculée avant selon si reportés ou pas)
+     * @param heureDepartGroupe L'heure de départ du groupe (calculée avant selon si
+     *                          reportés ou pas)
      */
     private RegroupementDTO creerIntervalleGroupe(int numeroGroupe, Reservation premiereDuGroupe,
             Set<Integer> indicesReportees, List<Reservation> reservations,
@@ -389,24 +390,20 @@ public class PlanificationService {
         RegroupementDTO groupe = new RegroupementDTO(numeroGroupe, debutIntervalle, finIntervalle, delaiAttente);
         Set<Integer> resasIdsAjoutees = new HashSet<>();
 
-        // Ajouter les réservations reportées du groupe précédent EN PRIORITÉ
-        int countReportees = 0;
-        for (Integer indiceReporte : indicesReportees) {
-            if (indiceReporte >= 0 && indiceReporte < reservations.size()) {
-                Reservation r = reservations.get(indiceReporte);
-                if (!resasIdsAjoutees.contains(r.getId())) {
-                    groupe.ajouterReservation(r);
-                    resasIdsAjoutees.add(r.getId());
-                    countReportees++;
-                }
-            }
-        }
+        // Les réservations reportées du groupe précédent sont priorisées pour
+        // l'assignation des véhicules
+        // MAIS elles ne doivent PAS être ajoutées à la liste des réservations du groupe
+        // (elles gardent leurs heures RDV d'origine du groupe précédent)
+        // Leur nombre est comptabilisé pour la priorisation
+        int countReportees = indicesReportees.size();
         groupe.setNombreReservationsReportees(countReportees);
 
-        // Ajouter les réservations à partir de la courante qui tombent dans l'intervalle
-        // On n'ajoute premiereDuGroupe que si elle est dans l'intervalle (ou déjà ajoutée)!
+        // Ajouter les réservations à partir de la courante qui tombent dans
+        // l'intervalle
+        // On n'ajoute premiereDuGroupe que si elle est dans l'intervalle (ou déjà
+        // ajoutée)!
         int indexPremiere = reservations.indexOf(premiereDuGroupe);
-        
+
         for (int i = indexPremiere; i < reservations.size(); i++) {
             Reservation resa = reservations.get(i);
 
@@ -536,8 +533,10 @@ public class PlanificationService {
         reservationsGroupe.sort((r1, r2) -> {
             boolean r1Reportee = idsReservationsReportees.contains(r1.getId());
             boolean r2Reportee = idsReservationsReportees.contains(r2.getId());
-            if (r1Reportee && !r2Reportee) return -1;
-            if (!r1Reportee && r2Reportee) return 1;
+            if (r1Reportee && !r2Reportee)
+                return -1;
+            if (!r1Reportee && r2Reportee)
+                return 1;
             return Integer.compare(r2.getNombre(), r1.getNombre());
         });
     }
@@ -546,8 +545,10 @@ public class PlanificationService {
         vehicules.sort((v1, v2) -> {
             int traj1 = tracking.nombreTrajetsParVehicule.getOrDefault(v1.getId(), 0);
             int traj2 = tracking.nombreTrajetsParVehicule.getOrDefault(v2.getId(), 0);
-            if (traj1 > 0 && traj2 == 0) return -1;
-            if (traj1 == 0 && traj2 > 0) return 1;
+            if (traj1 > 0 && traj2 == 0)
+                return -1;
+            if (traj1 == 0 && traj2 > 0)
+                return 1;
             return Integer.compare(v2.getPlace(), v1.getPlace());
         });
     }
@@ -577,7 +578,8 @@ public class PlanificationService {
 
     private boolean hasPassagersRemaining(Map<Reservation, Integer> remainingPax) {
         for (int reste : remainingPax.values()) {
-            if (reste > 0) return true;
+            if (reste > 0)
+                return true;
         }
         return false;
     }
@@ -603,7 +605,8 @@ public class PlanificationService {
                     ? trouverPremiereReservationRestante(reservationsGroupe, remainingPax)
                     : trouverReservationRestanteLaPlusProche(reservationsGroupe, remainingPax, lieuCourantId);
 
-            if (r == null) break;
+            if (r == null)
+                break;
 
             int besoin = remainingPax.get(r);
             int aPrendre = Math.min(besoin, capaciteRestante);
@@ -629,7 +632,8 @@ public class PlanificationService {
             int reste = remainingPax.get(r);
             Integer originalIdxVal = originalIndices.get(r);
             int originalIdx = (originalIdxVal != null) ? originalIdxVal : -1;
-            if (originalIdx == -1) continue;
+            if (originalIdx == -1)
+                continue;
 
             if (reste == 0) {
                 tracking.assignees[originalIdx] = true;
@@ -674,7 +678,8 @@ public class PlanificationService {
                 candidats.add(r);
             }
         }
-        if (candidats.isEmpty()) return null;
+        if (candidats.isEmpty())
+            return null;
 
         candidats.sort((r1, r2) -> {
             Integer reste1 = remainingPax.get(r1);
@@ -684,13 +689,17 @@ public class PlanificationService {
             double dist1 = getDistance(lieuCourantId, lieu1);
             double dist2 = getDistance(lieuCourantId, lieu2);
             int cmpDist = Double.compare(dist1, dist2);
-            if (cmpDist != 0) return cmpDist;
+            if (cmpDist != 0)
+                return cmpDist;
             boolean entame1 = reste1 < r1.getNombre();
             boolean entame2 = reste2 < r2.getNombre();
-            if (entame1 && !entame2) return -1;
-            if (!entame1 && entame2) return 1;
+            if (entame1 && !entame2)
+                return -1;
+            if (!entame1 && entame2)
+                return 1;
             int cmpTaille = Integer.compare(reste1, reste2);
-            if (cmpTaille != 0) return cmpTaille;
+            if (cmpTaille != 0)
+                return cmpTaille;
             return Integer.compare(r1.getReference(), r2.getReference());
         });
         return candidats.get(0);
@@ -796,7 +805,8 @@ public class PlanificationService {
 
         while (!restants.isEmpty()) {
             ReservationPlanningDTO plusProche = trouverReservationLaPlusProche(restants, posId);
-            if (plusProche == null) break;
+            if (plusProche == null)
+                break;
             ordreDepot.add(plusProche);
             posId = plusProche.getLieuHotelId();
             restants.remove(plusProche);
@@ -1306,7 +1316,7 @@ public class PlanificationService {
 
         // Calculer le temps total en minutes (avec vérification de division par zéro)
         int timeMinutes = 0;
-        if (vpDTO.getVehicule() != null && vpDTO.getVehicule().getVitesseMoyenne() != null 
+        if (vpDTO.getVehicule() != null && vpDTO.getVehicule().getVitesseMoyenne() != null
                 && vpDTO.getVehicule().getVitesseMoyenne() > 0) {
             timeMinutes = (int) (vpDTO.getDistanceTotale() / vpDTO.getVehicule().getVitesseMoyenne() * 60);
         }
@@ -1433,10 +1443,12 @@ public class PlanificationService {
                     stat.totalDistance += vp.getDistanceTotale();
                 }
 
-                if (vp.getHeureDepart() != null && (stat.heureDepart == null || vp.getHeureDepart().before(stat.heureDepart))) {
+                if (vp.getHeureDepart() != null
+                        && (stat.heureDepart == null || vp.getHeureDepart().before(stat.heureDepart))) {
                     stat.heureDepart = vp.getHeureDepart();
                 }
-                if (vp.getHeureRetourAeroport() != null && (stat.heureRetour == null || vp.getHeureRetourAeroport().after(stat.heureRetour))) {
+                if (vp.getHeureRetourAeroport() != null
+                        && (stat.heureRetour == null || vp.getHeureRetourAeroport().after(stat.heureRetour))) {
                     stat.heureRetour = vp.getHeureRetourAeroport();
                 }
             }
