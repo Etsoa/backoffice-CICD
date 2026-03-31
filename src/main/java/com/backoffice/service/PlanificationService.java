@@ -667,12 +667,14 @@ public class PlanificationService {
             boolean premierChoix = true;
             Integer lieuCourantId = aeroportId;
 
-            // Premier choix: ordre des réservations. Ensuite: plus proche de la dernière
-            // destination.
+            // Sprint 7:
+            // - Premier choix du véhicule: plus grand reste
+            // - Choix suivants: optimiser l'itinéraire (distance) et boucher la capacité
             while (capaciteRestante > 0) {
                 Reservation r = premierChoix
                         ? trouverPremiereReservationRestante(reservationsGroupe, remainingPax)
-                        : trouverReservationRestanteLaPlusProche(reservationsGroupe, remainingPax, lieuCourantId);
+                    : trouverReservationRestanteLaPlusProche(reservationsGroupe, remainingPax, lieuCourantId,
+                        capaciteRestante);
 
                 if (r == null) {
                     break; // Plus aucun passager à placer
@@ -754,42 +756,41 @@ public class PlanificationService {
 
     /**
      * Trouver la première réservation qui a encore des passagers à placer.
-     * Priorité aux réservations déjà entamées (pour les finir), puis aux plus
-     * grandes.
+     * Sprint 7 : priorité stricte au plus grand reste de passagers.
      */
     private Reservation trouverPremiereReservationRestante(List<Reservation> reservationsGroupe,
             Map<Reservation, Integer> remainingPax) {
-        // 1. Chercher une réservation déjà entamée (reste < initial)
-        for (Reservation r : reservationsGroupe) {
-            Integer reste = remainingPax.get(r);
-            if (reste != null && reste > 0 && reste < r.getNombre()) {
-                return r;
-            }
-        }
-
-        // 2. Sinon, prendre la première de la liste (qui est triée par taille
-        // décroissante)
+        Reservation meilleur = null;
+        int maxReste = -1;
         for (Reservation r : reservationsGroupe) {
             Integer reste = remainingPax.get(r);
             if (reste != null && reste > 0) {
-                return r;
+                if (reste > maxReste) {
+                    meilleur = r;
+                    maxReste = reste;
+                } else if (reste == maxReste && meilleur != null
+                        && r.getReference().compareTo(meilleur.getReference()) < 0) {
+                    // stabilité de tri si même nombre de passagers
+                    meilleur = r;
+                }
             }
         }
-        return null;
+        return meilleur;
     }
 
     /**
      * Trouver la réservation restante la plus proche du lieu courant.
      * Critères :
-     * 1. Distance (plus proche)
-     * 2. Déjà entamée (priorité à finir les splits)
-     * 3. Taille croissante (prendre les petits pour boucher les trous)
-     * 4. Référence (stabilité)
+     * 1. Exact fit (reste == capacité restante) pour éviter les splits inutiles
+     * 2. Distance (plus proche)
+     * 3. Déjà entamée (priorité à finir les splits)
+     * 4. Taille croissante (prendre les petits pour boucher les trous)
+     * 5. Référence (stabilité)
      */
     private Reservation trouverReservationRestanteLaPlusProche(List<Reservation> reservationsGroupe,
             Map<Reservation, Integer> remainingPax,
-            Integer lieuCourantId) {
-        
+            Integer lieuCourantId,
+            int capaciteRestante) {
         // Filtrer les candidats valides
         List<Reservation> candidats = new ArrayList<>();
         for (Reservation r : reservationsGroupe) {
@@ -806,7 +807,16 @@ public class PlanificationService {
             Integer reste1 = remainingPax.get(r1);
             Integer reste2 = remainingPax.get(r2);
 
-            // 1. Distance
+            // 1. Exact fit d'abord (évite de découper une grosse réservation si un petit
+            // groupe remplit exactement la place restante)
+            boolean exact1 = reste1 == capaciteRestante;
+            boolean exact2 = reste2 == capaciteRestante;
+            if (exact1 && !exact2)
+                return -1;
+            if (!exact1 && exact2)
+                return 1;
+
+            // 2. Distance
             Integer lieu1 = getLieuIdByHotelId(r1.getHotel());
             Integer lieu2 = getLieuIdByHotelId(r2.getHotel());
             double dist1 = getDistance(lieuCourantId, lieu1);
@@ -815,7 +825,7 @@ public class PlanificationService {
             if (cmpDist != 0)
                 return cmpDist;
 
-            // 2. Statut entamé (priorité si reste < nombre)
+            // 3. Statut entamé (priorité si reste < nombre)
             boolean entame1 = reste1 < r1.getNombre();
             boolean entame2 = reste2 < r2.getNombre();
             if (entame1 && !entame2)
@@ -823,12 +833,12 @@ public class PlanificationService {
             if (!entame1 && entame2)
                 return 1;
 
-            // 3. Taille croissante (du reste à placer)
+            // 4. Taille croissante (du reste à placer)
             int cmpTaille = Integer.compare(reste1, reste2);
             if (cmpTaille != 0)
                 return cmpTaille;
 
-            // 4. Référence
+            // 5. Référence
             return Integer.compare(r1.getReference(), r2.getReference());
         });
 
