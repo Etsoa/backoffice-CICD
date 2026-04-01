@@ -37,6 +37,14 @@ public class Reservation {
     @Column(name = "client")
     private String client;
 
+    // Flag temporaire (non persistant) pour marquer les restes créés dans le
+    // groupement actuel
+    private transient boolean isRemainderInCurrentGrouping = false;
+
+    // Ordre de traitement pour la file d'attente (non persistant)
+    // Utilisé pour prioriser les réservations lors du remplissage des véhicules
+    private transient Integer orderIndex = Integer.MAX_VALUE;
+
     public Reservation() {
     }
 
@@ -103,5 +111,21 @@ public class Reservation {
 
     public void setClient(String client) {
         this.client = client;
+    }
+
+    public boolean isRemainderInCurrentGrouping() {
+        return isRemainderInCurrentGrouping;
+    }
+
+    public void setRemainderInCurrentGrouping(boolean remainderInCurrentGrouping) {
+        isRemainderInCurrentGrouping = remainderInCurrentGrouping;
+    }
+
+    public Integer getOrderIndex() {
+        return orderIndex;
+    }
+
+    public void setOrderIndex(Integer orderIndex) {
+        this.orderIndex = orderIndex;
     }
 }
