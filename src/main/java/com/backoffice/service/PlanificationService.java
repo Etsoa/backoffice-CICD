@@ -615,6 +615,7 @@ public class PlanificationService {
         Map<Reservation, Integer> remainingPax = new HashMap<>(); // Passagers restants par réservation
         List<Reservation> reservationsGroupe = new ArrayList<>();
         Map<Reservation, Integer> originalIndices = new HashMap<>();
+        Set<Reservation> restesCreatedInThisGroup = new HashSet<>();  // Track les restes créés dans ce groupe
 
         for (Integer idx : indicesGroupe) {
             Reservation r = reservations.get(idx);
@@ -623,8 +624,32 @@ public class PlanificationService {
             originalIndices.put(r, idx);
         }
 
-        // Trier par nombre de passagers décroissant (plus grands groupes en premier)
-        reservationsGroupe.sort((r1, r2) -> Integer.compare(r2.getNombre(), r1.getNombre()));
+        // Créer une map pour identifier les réservations reportées (partiellement assignées du groupe précédent)
+        Map<Integer, Boolean> isReported = new HashMap<>();
+        for (Integer idx : indicesGroupe) {
+            isReported.put(idx, !tracking.assignees[idx]); // false means reported/partial
+        }
+
+        // Trier : Priorité 1 = Restes/Reportées, Priorité 2 = par nombre décroissant
+        reservationsGroupe.sort((r1, r2) -> {
+            Integer idx1 = originalIndices.get(r1);
+            Integer idx2 = originalIndices.get(r2);
+            
+            // 1. Priorité aux réservations reportées (restes du groupe précédent)
+            boolean r1Reported = idx1 != null && isReported.getOrDefault(idx1, false);
+            boolean r2Reported = idx2 != null && isReported.getOrDefault(idx2, false);
+            if (r1Reported && !r2Reported) return -1;  // r1 d'abord si c'est un reste
+            if (!r1Reported && r2Reported) return 1;   // r2 d'abord si c'est un reste
+            
+            // 2. Sinon, trier par nombre de passagers décroissant (plus grands groupes en premier)
+            return Integer.compare(r2.getNombre(), r1.getNombre());
+        });
+        
+        // Assigner l'ordre de traitement (orderIndex) à chaque réservation
+        // Cet ordre persiste même si la réservation est splitée
+        for (int i = 0; i < reservationsGroupe.size(); i++) {
+            reservationsGroupe.get(i).setOrderIndex(i);
+        }
 
         // 2. Trier les véhicules : Priorité aux déjà utilisés (trajets > 0) puis
         // capacité Décroissante
@@ -674,7 +699,7 @@ public class PlanificationService {
                 Reservation r = premierChoix
                         ? trouverPremiereReservationRestante(reservationsGroupe, remainingPax)
                     : trouverReservationRestanteLaPlusProche(reservationsGroupe, remainingPax, lieuCourantId,
-                        capaciteRestante);
+                        capaciteRestante, restesCreatedInThisGroup);
 
                 if (r == null) {
                     break; // Plus aucun passager à placer
@@ -738,6 +763,8 @@ public class PlanificationService {
                     Reservation resteResa = new Reservation(
                             r.getId(), r.getReference(), reste, r.getDate(), r.getHeure(), r.getHotel());
                     resteResa.setClient(r.getClient());
+                    resteResa.setRemainderInCurrentGrouping(true);  // Marquer comme reste créé dans ce groupe
+                    restesCreatedInThisGroup.add(resteResa);  // Ajouter à la Set pour priorisation
 
                     // Remplacer dans la liste principale
                     reservations.set(originalIdx, resteResa);
@@ -756,22 +783,21 @@ public class PlanificationService {
 
     /**
      * Trouver la première réservation qui a encore des passagers à placer.
-     * Sprint 7 : priorité stricte au plus grand reste de passagers.
+     * Sprint 7 : Respect de l'ordre d'assignation établi au départ (orderIndex).
+     * Retourne la réservation avec l'orderIndex le plus petit qui a encore des passagers.
      */
     private Reservation trouverPremiereReservationRestante(List<Reservation> reservationsGroupe,
             Map<Reservation, Integer> remainingPax) {
         Reservation meilleur = null;
-        int maxReste = -1;
+        int minOrder = Integer.MAX_VALUE;
+        
         for (Reservation r : reservationsGroupe) {
             Integer reste = remainingPax.get(r);
             if (reste != null && reste > 0) {
-                if (reste > maxReste) {
+                Integer orderIdx = r.getOrderIndex();
+                if (orderIdx != null && orderIdx < minOrder) {
                     meilleur = r;
-                    maxReste = reste;
-                } else if (reste == maxReste && meilleur != null
-                        && r.getReference().compareTo(meilleur.getReference()) < 0) {
-                    // stabilité de tri si même nombre de passagers
-                    meilleur = r;
+                    minOrder = orderIdx;
                 }
             }
         }
@@ -779,18 +805,22 @@ public class PlanificationService {
     }
 
     /**
-     * Trouver la réservation restante la plus proche du lieu courant.
-     * Critères :
+     * Trouver la réservation restante par écart de capacité minimal.
+     * Sprint 7 : Algorithme d'optimisation du remplissage
+     * 
+     * Critères (dans l'ordre) :
+     * 0. Priorité aux restes créés dans ce groupe (si pas encore tous épuisés dans ce groupe)
      * 1. Exact fit (reste == capacité restante) pour éviter les splits inutiles
-     * 2. Distance (plus proche)
-     * 3. Déjà entamée (priorité à finir les splits)
+     * 2. Écart minimal (|capaciteRestante - reste|) pour maximiser le remplissage
+     * 3. Statut entamé (déjà splittée) - priorité à finir les splits
      * 4. Taille croissante (prendre les petits pour boucher les trous)
      * 5. Référence (stabilité)
      */
     private Reservation trouverReservationRestanteLaPlusProche(List<Reservation> reservationsGroupe,
             Map<Reservation, Integer> remainingPax,
             Integer lieuCourantId,
-            int capaciteRestante) {
+            int capaciteRestante,
+            Set<Reservation> restesCreatedInThisGroup) {
         // Filtrer les candidats valides
         List<Reservation> candidats = new ArrayList<>();
         for (Reservation r : reservationsGroupe) {
@@ -806,6 +836,15 @@ public class PlanificationService {
         candidats.sort((r1, r2) -> {
             Integer reste1 = remainingPax.get(r1);
             Integer reste2 = remainingPax.get(r2);
+            
+            // 0. Priorité aux restes créés dans ce groupe SEULEMENT s'il en reste
+            // Cette priorité s'applique pour remplir les véhicules restants du même groupe
+            boolean isReste1 = r1.isRemainderInCurrentGrouping() && restesCreatedInThisGroup.contains(r1);
+            boolean isReste2 = r2.isRemainderInCurrentGrouping() && restesCreatedInThisGroup.contains(r2);
+            if (isReste1 && !isReste2)
+                return -1;  // r1 est un reste créé, le prioriser
+            if (!isReste1 && isReste2)
+                return 1;   // r2 est un reste créé, le prioriser
 
             // 1. Exact fit d'abord (évite de découper une grosse réservation si un petit
             // groupe remplit exactement la place restante)
@@ -816,16 +855,17 @@ public class PlanificationService {
             if (!exact1 && exact2)
                 return 1;
 
-            // 2. Distance
-            Integer lieu1 = getLieuIdByHotelId(r1.getHotel());
-            Integer lieu2 = getLieuIdByHotelId(r2.getHotel());
-            double dist1 = getDistance(lieuCourantId, lieu1);
-            double dist2 = getDistance(lieuCourantId, lieu2);
-            int cmpDist = Double.compare(dist1, dist2);
-            if (cmpDist != 0)
-                return cmpDist;
+            // 2. Écart minimal par rapport à la capacité restante
+            // Formule: |capaciteRestante - reste|
+            // Plus elle est proche de 0, mieux c'est (remplissage optimal)
+            int ecart1 = Math.abs(capaciteRestante - reste1);
+            int ecart2 = Math.abs(capaciteRestante - reste2);
+            int cmpEcart = Integer.compare(ecart1, ecart2);
+            if (cmpEcart != 0)
+                return cmpEcart;
 
-            // 3. Statut entamé (priorité si reste < nombre)
+            // 3. Statut entamé (priorité si reste < nombre originale)
+            // Cela signifie que la réservation a déjà été partiellement assignée
             boolean entame1 = reste1 < r1.getNombre();
             boolean entame2 = reste2 < r2.getNombre();
             if (entame1 && !entame2)
@@ -838,7 +878,7 @@ public class PlanificationService {
             if (cmpTaille != 0)
                 return cmpTaille;
 
-            // 5. Référence
+            // 5. Référence (stabilité)
             return Integer.compare(r1.getReference(), r2.getReference());
         });
 
