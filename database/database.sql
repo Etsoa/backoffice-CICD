@@ -23,6 +23,7 @@ CREATE TABLE reservation (
     date DATE NOT NULL,
     heure TIME NOT NULL,
     hotel INT NOT NULL,
+    client VARCHAR(255),
     FOREIGN KEY (hotel) REFERENCES hotel(id)
 );
 
@@ -40,6 +41,7 @@ CREATE TABLE vehicule (
     place INT NOT NULL,
     type_carburant INT NOT NULL,
     vitesse_moyenne DECIMAL(5,2) NOT NULL DEFAULT 60.00, -- en km/h
+    heure_disponibilite TIME NOT NULL DEFAULT '00:00:00',
     FOREIGN KEY (type_carburant) REFERENCES type_carburant(id)
 );
 
@@ -84,75 +86,145 @@ CREATE TABLE configuration_attente (
     actif BOOLEAN NOT NULL DEFAULT TRUE
 );
 
--- Initialisation des hôtels
-INSERT INTO hotel (libelle) VALUES
-('Colbert'),
-('Novotel'),
-('Ibis'),
-('Lokanga');
+-- ============================================
+-- TABLES POUR LA PERSISTENCE DES PLANIFICATIONS
+-- Sprint 5 - Sauvegarde des planifications
+-- ============================================
 
--- Initialisation des réservations (données de test couvrant tous les scénarios)
-INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
--- === Date 2026-01-28 : Fenêtre temporelle + groupement ===
-(1001, 4, '2026-01-28', '07:00', 1, 'client1001'),   -- 4 pers, Colbert à 07:00
-(1002, 3, '2026-01-28', '07:20', 2, 'client1002'),   -- 3 pers, Novotel à 07:20 (dans fenêtre 07:00+30min → groupement possible)
-(1003, 2, '2026-01-28', '07:45', 3, 'client1003'),   -- 2 pers, Ibis à 07:45 (hors fenêtre → nouveau véhicule)
-(1004, 11, '2026-01-28', '15:00', 4, 'client1004'),  -- 11 pers, Lokanga à 15:00 (gros véhicule nécessaire)
+-- ============================================
+-- TABLE PRINCIPALE : PLANIFICATION
+-- ============================================
+-- Une planification = une date donnée avec tous les regroupements et assignations
+CREATE TABLE planification (
+    id SERIAL PRIMARY KEY,
+    date_planification DATE NOT NULL UNIQUE,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    statut VARCHAR(20) DEFAULT 'DRAFT',  -- DRAFT | ACTIVE | ARCHIVED
+    delai_attente_utilise INT,  -- délai appliqué pour cette planification (en minutes)
+    nombre_regroupements INT,
+    nombre_reservations_total INT,
+    nombre_reservations_assignees INT,
+    nombre_vehicules_utilises INT,
+    actif BOOLEAN DEFAULT TRUE
+);
 
--- === Date 2026-02-05 : Même heure + multi-hôtels + dépassement capacité ===
-(2001, 3, '2026-02-05', '10:00', 1, 'client2001'),   -- 3 pers, Colbert à 10:00
-(2002, 1, '2026-02-05', '10:00', 4, 'client2002'),   -- 1 pers, Lokanga à 10:00 (même heure, groupement avec 2001)
-(2003, 2, '2026-02-05', '10:15', 3, 'client2003'),   -- 2 pers, Ibis à 10:15 (dans fenêtre, total cumulé 3+1+2=6)
-(2004, 4, '2026-02-05', '10:25', 2, 'client2004'),   -- 4 pers, Novotel à 10:25 (dans fenêtre, 6+4=10 → dépasse → nouveau véhicule)
-(2005, 7, '2026-02-05', '18:30', 1, 'client2005'),   -- 7 pers, Colbert à 18:30 (fenêtre isolée, véhicule 8 places Diesel)
+-- ============================================
+-- TABLE : REGROUPEMENTS (groupes de réservations)
+-- ============================================
+-- Chaque regroupement = ensemble de réservations groupées avec délai d'attente
+CREATE TABLE regroupement (
+    id SERIAL PRIMARY KEY,
+    planification_id INT NOT NULL,
+    numero_regroupement INT NOT NULL,  -- 1, 2, 3... (ordre du groupe dans la journée)
+    heure_depart_groupe TIME NOT NULL,  -- heure de départ commune (dernière réservation du groupe)
+    nombre_reservations INT NOT NULL,
+    nombre_passagers_total INT NOT NULL,
+    nombre_vehicules_assignes INT NOT NULL,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (planification_id) REFERENCES planification(id) ON DELETE CASCADE,
+    UNIQUE(planification_id, numero_regroupement)
+);
 
--- === Date 2026-02-09 : Véhicule seul + priorité Diesel + proximité ===
-(3001, 2, '2026-02-09', '08:30', 2, 'client3001'),   -- 2 pers, Novotel à 08:30 (seul → petit véhicule)
-(3002, 5, '2026-02-09', '14:00', 1, 'client3002'),   -- 5 pers, Colbert à 14:00
-(3003, 4, '2026-02-09', '14:10', 3, 'client3003');   -- 4 pers, Ibis à 14:10 (dans fenêtre, 5+4=9 → dépasse 5 places → nouveau véhicule)
+-- ============================================
+-- TABLE : MAPPING REGROUPEMENT-RESERVATIONS
+-- ============================================
+-- Associe les réservations à leurs regroupements
+CREATE TABLE regroupement_reservation (
+    id SERIAL PRIMARY KEY,
+    regroupement_id INT NOT NULL,
+    reservation_id INT NOT NULL,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (regroupement_id) REFERENCES regroupement(id) ON DELETE CASCADE,
+    FOREIGN KEY (reservation_id) REFERENCES reservation(id),
+    UNIQUE(regroupement_id, reservation_id)
+);
 
--- Initialisation des lieux
-INSERT INTO lieu (code, libelle) VALUES
-('TNR', 'Ivato'),          -- Aéroport
-('COL', 'Colbert'),
-('NOV', 'Novotel'),
-('IBL', 'Ibis'),
-('LOK', 'Lokanga');
+-- ============================================
+-- TABLE : ASSIGNATION VEHICULE AU REGROUPEMENT
+-- ============================================
+-- Un regroupement peut avoir plusieurs véhicules (ex: capacité dépassée)
+CREATE TABLE assignation_vehicule (
+    id SERIAL PRIMARY KEY,
+    regroupement_id INT NOT NULL,
+    vehicule_id INT NOT NULL,
+    numero_ordre_groupe INT NOT NULL,  -- 1er, 2e véhicule assigné au groupe
+    -- Statistiques du voyage
+    nombre_trajet_effectues INT DEFAULT 1,  -- nombre de trajets effectués par ce véhicule aujourd'hui
+    heure_depart_aeroport TIME NOT NULL,
+    heure_retour_aeroport TIME NOT NULL,
+    distance_totale_km DECIMAL(8, 2) NOT NULL,
+    temps_total_minutes INT NOT NULL,
+    nombre_passagers_transportes INT NOT NULL,
+    -- Traçabilité
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (regroupement_id) REFERENCES regroupement(id) ON DELETE CASCADE,
+    FOREIGN KEY (vehicule_id) REFERENCES vehicule(id),
+    UNIQUE(regroupement_id, numero_ordre_groupe)
+);
 
--- Initialisation des distances (une seule direction par paire, la distance est symétrique)
-INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-(1, 2, 18.5),  -- Ivato <-> Colbert
-(1, 3, 16.2),  -- Ivato <-> Novotel
-(1, 4, 17.8),  -- Ivato <-> Ibis
-(1, 5, 19.3),  -- Ivato <-> Lokanga
-(2, 3, 3.5),   -- Colbert <-> Novotel
-(2, 4, 2.8),   -- Colbert <-> Ibis
-(2, 5, 4.0),   -- Colbert <-> Lokanga
-(3, 4, 2.0),   -- Novotel <-> Ibis
-(3, 5, 5.2),   -- Novotel <-> Lokanga
-(4, 5, 3.6);   -- Ibis <-> Lokanga
+-- ============================================
+-- TABLE : ITINERAIRE (détail des arrêts/étapes)
+-- ============================================
+-- Chaque étape du parcours d'un véhicule
+-- Ex: Aéroport -> Hôtel Colbert -> Hôtel Novotel -> Aéroport
+CREATE TABLE itineraire_arret (
+    id SERIAL PRIMARY KEY,
+    assignation_vehicule_id INT NOT NULL,
+    ordre_arret INT NOT NULL,  -- 1=départ aéroport, 2=1er hôtel, 3=2e hôtel, etc.
+    lieu_id INT NOT NULL,  -- aéroport (TNR) ou lieu de l'hôtel
+    hotel_id INT,  -- NULL si c'est l'aéroport, sinon l'id de l'hôtel
+    heure_arrivee TIME NOT NULL,  -- heure prévue d'arrivée
+    heure_depart TIME NOT NULL,  -- heure prévue de départ
+    nombre_passagers_embarques INT,  -- nombre de passagers cumulé à cet arrêt
+    distance_depuis_prev_km DECIMAL(8, 2),  -- distance depuis l'arrêt précédent
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assignation_vehicule_id) REFERENCES assignation_vehicule(id) ON DELETE CASCADE,
+    FOREIGN KEY (lieu_id) REFERENCES lieu(id),
+    FOREIGN KEY (hotel_id) REFERENCES hotel(id)
+);
 
--- Initialisation des types de carburant
-INSERT INTO type_carburant (code, libelle) VALUES
-('D', 'Diesel'),
-('Es', 'Essence'),
-('H', 'Hybride'),
-('El', 'Electrique');
+-- ============================================
+-- TABLE : SUIVI DES TRAJETS VEHICULE (Analytics)
+-- ============================================
+-- Historique des trajets effectués par chaque véhicule pour analytics
+CREATE TABLE suivi_trajet_vehicule (
+    id SERIAL PRIMARY KEY,
+    planification_id INT NOT NULL,
+    vehicule_id INT NOT NULL,
+    date_planification DATE NOT NULL,
+    nombre_regroupements_assignes INT,
+    nombre_passagers_total INT,
+    distance_totale_km DECIMAL(10, 2),
+    temps_total_heures DECIMAL(5, 2),
+    heure_premiere_utilisation TIME,
+    heure_derniere_retour TIME,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (planification_id) REFERENCES planification(id) ON DELETE CASCADE,
+    FOREIGN KEY (vehicule_id) REFERENCES vehicule(id),
+    UNIQUE(planification_id, vehicule_id)
+);
 
--- Initialisation des véhicules
--- Ordre de priorité : Diesel (type 1), Essence (type 2), puis autres (Hybride 3, Electrique 4)
-INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne) VALUES
-('VH-2026-001', 4, 1, 60.00),   -- 4 places, Diesel
-('VH-2026-002', 8, 1, 55.00),   -- 8 places, Diesel (priorite)
-('VH-2026-003', 5, 2, 65.00),   -- 5 places, Essence
-('VH-2026-004', 12, 3, 50.00),  -- 12 places, Hybride
-('VH-2026-005', 3, 4, 70.00),   -- 3 places, Electrique
-('VH-2026-006', 18, 1, 50.0);   -- 18 places, Diesel (gros vehicule)
+-- ============================================
+-- INDEX POUR OPTIMISER LES REQUÊTES
+-- ============================================
+CREATE INDEX idx_planif_date ON planification(date_planification);
+CREATE INDEX idx_planif_statut ON planification(statut, actif);
+CREATE INDEX idx_planif_date_statut ON planification(date_planification, statut);
 
--- Initialisation des paramètres
-INSERT INTO parametre (cle, valeur, description) VALUES
-('delai_attente', '30', 'Délai d''attente en minutes avant le départ du véhicule');
+CREATE INDEX idx_regroup_planif ON regroupement(planification_id);
+CREATE INDEX idx_regroup_numero ON regroupement(planification_id, numero_regroupement);
 
--- Initialisation de la configuration du temps d'attente (Sprint 5)
-INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VALUES
-(30, 'Configuration par défaut - 30 minutes de délai pour le regroupement des réservations', TRUE);
+CREATE INDEX idx_regroup_resa_regroupement ON regroupement_reservation(regroupement_id);
+CREATE INDEX idx_regroup_resa_reservation ON regroupement_reservation(reservation_id);
+
+CREATE INDEX idx_assign_regroup ON assignation_vehicule(regroupement_id);
+CREATE INDEX idx_assign_vehicule ON assignation_vehicule(vehicule_id);
+CREATE INDEX idx_assign_numero_ordre ON assignation_vehicule(regroupement_id, numero_ordre_groupe);
+
+CREATE INDEX idx_itineraire_assign ON itineraire_arret(assignation_vehicule_id);
+CREATE INDEX idx_itineraire_ordre ON itineraire_arret(assignation_vehicule_id, ordre_arret);
+
+CREATE INDEX idx_suivi_planif ON suivi_trajet_vehicule(planification_id);
+CREATE INDEX idx_suivi_vehicule ON suivi_trajet_vehicule(vehicule_id);

@@ -1,122 +1,86 @@
--- ==============================================================================
--- SPRINT 7 - JEU DE DONNÉES COMPLET ET AUTONOME
--- ==============================================================================
--- Ce fichier contient TOUTES les données (structure et data) nécessaires pour 
--- tester la répartition intelligente des passagers (Sprint 7).
--- DATE DU SCÉNARIO DE TEST : 2026-05-01
--- ==============================================================================
+-- ============================================
+-- SPRINT 7 - TEST DATA
+-- Data adapted from chad folder for database.sql structure
+-- ============================================
 
--- 1. NETTOYAGE PRÉALABLE (Pour repartir d'une base propre pour ce scénario)
---    Attention : Supprime toutes les données existantes et remet les séquences à 1.
-TRUNCATE TABLE
-	assignation_vehicule,
-	regroupement_reservation,
-	regroupement,
-	planification,
-	reservation,
-	vehicule,
-	distance,
-	lieu,
-	hotel,
-	type_carburant,
-	configuration_attente,
-	parametre
-RESTART IDENTITY CASCADE;
-
--- Assurer la présence du champ d'heure de disponibilité véhicule
-ALTER TABLE vehicule
-	ADD COLUMN IF NOT EXISTS heure_disponibilite TIME NOT NULL DEFAULT '00:00:00';
-
--- ==============================================================================
--- 2. CONFIGURATION ET RÉFÉRENTIELS
--- ==============================================================================
-
--- Configuration du délai d'attente (30 min pour regrouper R1, R2, R3)
-INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VALUES
-(30, 'Standard Sprint 7', TRUE);
-
-INSERT INTO parametre (cle, valeur, description) VALUES 
-('delai_attente', '30', 'Délai par défaut'),
-('carburant_prioritaire', 'D', 'Diesel prioritaire');
-
--- Types de carburant (Diesel, Essence)
+-- ============================================
+-- Types de carburant
+-- ============================================
 INSERT INTO type_carburant (code, libelle) VALUES
 ('D', 'Diesel'),
-('Es', 'Essence');
+('Es', 'Essence'),
+('H', 'Hybride'),
+('El', 'Electrique');
 
--- Hôtels (Destinations possibles)
-INSERT INTO hotel (libelle) VALUES
-('Colbert'),
-('Novotel'),
-('Ibis');
+-- ============================================
+-- Clients
+-- ============================================
+INSERT INTO client (id_client, nom, prenom, email) VALUES
+('C001', 'Dupont', 'Jean', 'jean.dupont@example.com'),
+('C002', 'Martin', 'Marie', 'marie.martin@example.com'),
+('C003', 'Bernard', 'Pierre', 'pierre.bernard@example.com'),
+('C004', 'Dubois', 'Luc', 'luc.dubois@example.com'),
+('C005', 'Moreau', 'Sophie', 'sophie.moreau@example.com'),
+('C006', 'Laurent', 'Claire', 'claire.laurent@example.com');
 
--- Lieux (Aéroport + Localisation Hôtels)
+-- ============================================
+-- Lieux (Includes Aeroport and Hotels)
+-- ============================================
 INSERT INTO lieu (code, libelle) VALUES
-('TNR', 'Ivato Aéroport'),
-('COL', 'Colbert'),
-('NOV', 'Novotel'),
-('IBS', 'Ibis');
+('TNR', 'Aeroport Ivato'),
+('H1', 'Hotel 1'),
+('H2', 'Hotel 2');
 
--- Distances entre l'aéroport (code TNR) et les lieux hôtels (codes COL/NOV/IBS)
+-- ============================================
+-- Hôtels
+-- ============================================
+INSERT INTO hotel (libelle) VALUES
+('Aeroport Ivato'),
+('Hotel 1'),
+('Hotel 2');
+
+-- ============================================
+-- Véhicules
+-- ============================================
+INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES
+('vehicule1', 5, 1, 50.00, '09:00:00'),    -- Diesel, disponible à 09:00
+('vehicule2', 5, 2, 50.00, '09:00:00'),    -- Essence, disponible à 09:00
+('vehicule3', 12, 1, 50.00, '07:00:00'),   -- Diesel, disponible à 07:00
+('vehicule4', 9, 1, 50.00, '09:00:00'),    -- Diesel, disponible à 09:00
+('vehicule5', 12, 2, 50.00, '13:00:00');   -- Essence, disponible à 13:00
+
+-- ============================================
+-- Distances entre lieux
+-- ============================================
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'COL'), 90.0),
-((SELECT id FROM lieu WHERE code = 'TNR'), (SELECT id FROM lieu WHERE code = 'NOV'), 35.0),
-((SELECT id FROM lieu WHERE code = 'COL'), (SELECT id FROM lieu WHERE code = 'NOV'), 60.0);
+-- From Aeroport Ivato (TNR) to hotels
+(1, 2, 90.00),      -- TNR to Hotel 1
+(1, 3, 35.00),      -- TNR to Hotel 2
+-- Between hotels
+(2, 3, 60.00),      -- Hotel 1 to Hotel 2
+(3, 2, 60.00),      -- Hotel 2 to Hotel 1
+-- Return paths
+(2, 1, 90.00),      -- Hotel 1 to TNR
+(3, 1, 35.00);      -- Hotel 2 to TNR
 
--- ==============================================================================
--- 3. VÉHICULES SPÉCIFIQUES DU SCÉNARIO SPRINT 7
--- ==============================================================================
--- On a besoin de :
---  - V1 : 8 places (Diesel - Prioritaire)
---  - V2 : 3 places (Diesel)
---
-INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES 
-('V1-SPRINT1', 5, (SELECT id FROM type_carburant WHERE code = 'D'), 50.0, '00:00:00'),
-('V2-SPRINT7', 5, (SELECT id FROM type_carburant WHERE code = 'Es'), 50.0, '00:00:00'),
-('V3-SPRINT7', 12, (SELECT id FROM type_carburant WHERE code = 'D'), 50.0, '00:00:00'),
-('V4-SPRINT7', 9, (SELECT id FROM type_carburant WHERE code = 'D'), 50.0, '00:00:00'),
-('V5-SPRINT7', 12, (SELECT id FROM type_carburant WHERE code = 'Es'), 50.0, '13:00:00');
-
--- Update explicite: V5 ne devient disponible qu'à 13:00
-UPDATE vehicule
-SET heure_disponibilite = '13:00:00'
-WHERE reference = 'V5-SPRINT7';
-
--- ==============================================================================
--- 4. RÉSERVATIONS DU SCÉNARIO SPRINT 7
--- ==============================================================================
--- Date : 2026-05-01
--- Heure : 08:00 (Toutes arrivent en même temps -> Même groupe)
--- Référence | Nb Pers | Hôtel
--- 7001      | 6       | Colbert
--- 7002      | 4       | Novotel
--- 7003      | 3       | Ibis
--- -----------------------------------
--- TOTAL     | 13 Personnes
-
+-- ============================================
+-- Réservations (2026-03-19)
+-- ============================================
 INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
-(7001, 7, '2026-03-19', '09:00:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7001'), 
-(7002, 20, '2026-03-19', '08:00:00', (SELECT id FROM hotel WHERE libelle = 'Novotel'), 'client7002'), 
-(7003, 3, '2026-03-19', '09:10:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7003'), 
-(7004, 10, '2026-03-19', '09:15:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7004'), 
-(7005, 5, '2026-03-19', '09:20:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7005'), 
-(7006, 12, '2026-03-19', '13:30:00', (SELECT id FROM hotel WHERE libelle = 'Colbert'), 'client7006'); 
+(1, 7, '2026-03-19', '09:00:00', 2, 'C001'),
+(2, 20, '2026-03-19', '08:00:00', 3, 'C002'),
+(3, 3, '2026-03-19', '09:10:00', 2, 'C003'),
+(4, 10, '2026-03-19', '09:15:00', 2, 'C004'),
+(5, 5, '2026-03-19', '09:20:00', 2, 'C005'),
+(6, 12, '2026-03-19', '13:30:00', 2, 'C006');
 
--- ==============================================================================
--- VÉRIFICATION DU RÉSULTAT ATTENDU
--- ==============================================================================
--- Après execution de la plannification pour le 2026-05-01 :
---
--- [V1-SPRINT7] (Capacité 8) :
---   - Chargé à : 8 / 8 (PLEIN)
---   - Contient : R1 (6 pers) + Partie de R2 (2 pers)
---
--- [V2-SPRINT7] (Capacité 3) :
---   - Chargé à : 3 / 3 (PLEIN)
---   - Contient : Reste de R2 (2 pers) + Partie de R3 (1 pers)
---
--- [NON ASSIGNÉ] :
---   - Reste de R3 (2 pers)
---   - Devrait être reporté au prochain créneau (08:30 si délai 30min).
---
--- ==============================================================================
+-- ============================================
+-- Configuration du délai d'attente (Sprint 5)
+-- ============================================
+INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VALUES
+(30, 'Délai d''attente par défaut pour regroupement', TRUE);
+
+-- ============================================
+-- Paramètres globaux
+-- ============================================
+-- (Les paramètres sont récupérés depuis configuration_attente pour le délai d'attente)
