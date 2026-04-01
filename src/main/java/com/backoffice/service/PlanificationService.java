@@ -421,7 +421,7 @@ public class PlanificationService {
             Time debutIntervalleS = eventTime;
             Time finIntervalleS = eventTime; // l'heure de départ réelle sera recalculée plus tard
 
-                List<VehiculePlanningDTO> vehiculesGroupe = assignerVehiculesAuGroupe(
+            List<VehiculePlanningDTO> vehiculesGroupe = assignerVehiculesAuGroupe(
                     groupe, indicesGroupe, reservations, tracking, aeroportId,
                     delaiAttente, vehiculesDisponibles, debutIntervalleS, finIntervalleS, eventIsReturn);
 
@@ -633,7 +633,7 @@ public class PlanificationService {
      * - Diviser les réservations si nécessaire
      * - Prioriser les véhicules déjà utilisés
      */
-        private List<VehiculePlanningDTO> assignerVehiculesAuGroupe(
+    private List<VehiculePlanningDTO> assignerVehiculesAuGroupe(
             RegroupementDTO groupe, List<Integer> indicesGroupe, List<Reservation> reservations,
             TrackingData tracking, Integer aeroportId, int delaiAttente, List<Vehicule> vehiculesDisponibles,
             Time debutIntervalle, Time finIntervalle, boolean eventIsReturn) {
@@ -729,6 +729,14 @@ public class PlanificationService {
             int originalIdx = (originalIdxVal != null) ? originalIdxVal : -1;
             if (originalIdx != -1) {
                 tracking.assignees[originalIdx] = (reste == 0);
+            }
+        }
+
+        // Aucun vol dans l'intervalle : partir tout de suite avec les non assignés
+        // présents
+        if (phaseVol.isEmpty() && !phaseNonAssigne.isEmpty()) {
+            for (VehiculePlanningDTO vp : planningParVehicule.values()) {
+                vp.setHeureDepart(debutIntervalle);
             }
         }
 
