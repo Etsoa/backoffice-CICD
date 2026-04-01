@@ -782,8 +782,9 @@ public class PlanificationService {
         return groupe.getVehiculesAssignes();
     }
 
-    // Choisir le véhicule le plus adapté : capacité minimale ≥ besoin, tie-break
-    // Diesel>Essence, puis trajets
+    // Choisir le véhicule le plus adapté : capacité minimale ≥ besoin
+    // Tie-break : moins de trajets, puis carburant (Diesel>Essence), puis plus
+    // petite capacité si encore égal
     private Vehicule choisirVehiculeOptimal(Map<Vehicule, Integer> capaciteRestanteParVehicule,
             TrackingData tracking, Reservation resa, int besoin) {
         Vehicule best = null;
@@ -797,14 +798,19 @@ public class PlanificationService {
                 if (best == null || cap < capaciteRestanteParVehicule.get(best)) {
                     best = v;
                 } else if (best != null && cap == capaciteRestanteParVehicule.get(best)) {
-                    int prioFuel = Integer.compare(getPrioriteCarburant(v), getPrioriteCarburant(best));
-                    if (prioFuel < 0) {
+                    int trajV = tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0);
+                    int trajBest = tracking.nombreTrajetsParVehicule.getOrDefault(best.getId(), 0);
+                    if (trajV < trajBest) {
                         best = v;
-                    } else if (prioFuel == 0) {
-                        int trajV = tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0);
-                        int trajBest = tracking.nombreTrajetsParVehicule.getOrDefault(best.getId(), 0);
-                        if (trajV < trajBest) {
+                    } else if (trajV == trajBest) {
+                        int prioFuel = Integer.compare(getPrioriteCarburant(v), getPrioriteCarburant(best));
+                        if (prioFuel < 0) {
                             best = v;
+                        } else if (prioFuel == 0) {
+                            // Plus petite capacité en dernier recours
+                            if (v.getPlace() < best.getPlace()) {
+                                best = v;
+                            }
                         }
                     }
                 }
@@ -816,7 +822,7 @@ public class PlanificationService {
         }
 
         // Aucun véhicule ne peut tout prendre : choisir celui avec le plus de capacité
-        // restante
+        // restante, tie-break trajets puis carburant
         for (Map.Entry<Vehicule, Integer> e : capaciteRestanteParVehicule.entrySet()) {
             Vehicule v = e.getKey();
             int cap = e.getValue();
@@ -825,13 +831,13 @@ public class PlanificationService {
             if (best == null || cap > capaciteRestanteParVehicule.get(best)) {
                 best = v;
             } else if (best != null && cap == capaciteRestanteParVehicule.get(best)) {
-                int prioFuel = Integer.compare(getPrioriteCarburant(v), getPrioriteCarburant(best));
-                if (prioFuel < 0) {
+                int trajV = tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0);
+                int trajBest = tracking.nombreTrajetsParVehicule.getOrDefault(best.getId(), 0);
+                if (trajV < trajBest) {
                     best = v;
-                } else if (prioFuel == 0) {
-                    int trajV = tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0);
-                    int trajBest = tracking.nombreTrajetsParVehicule.getOrDefault(best.getId(), 0);
-                    if (trajV < trajBest) {
+                } else if (trajV == trajBest) {
+                    int prioFuel = Integer.compare(getPrioriteCarburant(v), getPrioriteCarburant(best));
+                    if (prioFuel < 0) {
                         best = v;
                     }
                 }
@@ -841,117 +847,12 @@ public class PlanificationService {
     }
 
     /**
-     * Trouver la première réservation qui a encore des passagers à placer.
-     * Sprint 7 : Respect de l'ordre d'assignation établi au départ (orderIndex).
-     * Retourne la réservation avec l'orderIndex le plus petit qui a encore des
-     * passagers.
-     */
-    private Reservation trouverPremiereReservationRestante(List<Reservation> reservationsGroupe,
-            Map<Reservation, Integer> remainingPax) {
-        Reservation meilleur = null;
-        int minOrder = Integer.MAX_VALUE;
-
-        for (Reservation r : reservationsGroupe) {
-            Integer reste = remainingPax.get(r);
-            if (reste != null && reste > 0) {
-                Integer orderIdx = r.getOrderIndex();
-                if (orderIdx != null && orderIdx < minOrder) {
-                    meilleur = r;
-                    minOrder = orderIdx;
-                }
-            }
-        }
-        return meilleur;
-    }
-
-    /**
-     * Trouver la réservation restante par écart de capacité minimal.
-     * Sprint 7 : Algorithme d'optimisation du remplissage
-     * 
-     * Critères (dans l'ordre) :
-     * 0. Priorité aux restes créés dans ce groupe (si pas encore tous épuisés dans
-     * ce groupe)
-     * 1. Exact fit (reste == capacité restante) pour éviter les splits inutiles
-     * 2. Écart minimal (|capaciteRestante - reste|) pour maximiser le remplissage
-     * 3. Statut entamé (déjà splittée) - priorité à finir les splits
-     * 4. Taille croissante (prendre les petits pour boucher les trous)
-     * 5. Référence (stabilité)
-     */
-    private Reservation trouverReservationRestanteLaPlusProche(List<Reservation> reservationsGroupe,
-            Map<Reservation, Integer> remainingPax,
-            Integer lieuCourantId,
-            int capaciteRestante,
-            Set<Reservation> restesCreatedInThisGroup) {
-        // Filtrer les candidats valides
-        List<Reservation> candidats = new ArrayList<>();
-        for (Reservation r : reservationsGroupe) {
-            Integer reste = remainingPax.get(r);
-            if (reste != null && reste > 0) {
-                candidats.add(r);
-            }
-        }
-
-        if (candidats.isEmpty())
-            return null;
-
-        candidats.sort((r1, r2) -> {
-            Integer reste1 = remainingPax.get(r1);
-            Integer reste2 = remainingPax.get(r2);
-
-            // 0. Priorité aux restes créés dans ce groupe SEULEMENT s'il en reste
-            // Cette priorité s'applique pour remplir les véhicules restants du même groupe
-            boolean isReste1 = r1.isRemainderInCurrentGrouping() && restesCreatedInThisGroup.contains(r1);
-            boolean isReste2 = r2.isRemainderInCurrentGrouping() && restesCreatedInThisGroup.contains(r2);
-            if (isReste1 && !isReste2)
-                return -1; // r1 est un reste créé, le prioriser
-            if (!isReste1 && isReste2)
-                return 1; // r2 est un reste créé, le prioriser
-
-            // 1. Exact fit d'abord (évite de découper une grosse réservation si un petit
-            // groupe remplit exactement la place restante)
-            boolean exact1 = reste1 == capaciteRestante;
-            boolean exact2 = reste2 == capaciteRestante;
-            if (exact1 && !exact2)
-                return -1;
-            if (!exact1 && exact2)
-                return 1;
-
-            // 2. Écart minimal par rapport à la capacité restante
-            // Formule: |capaciteRestante - reste|
-            // Plus elle est proche de 0, mieux c'est (remplissage optimal)
-            int ecart1 = Math.abs(capaciteRestante - reste1);
-            int ecart2 = Math.abs(capaciteRestante - reste2);
-            int cmpEcart = Integer.compare(ecart1, ecart2);
-            if (cmpEcart != 0)
-                return cmpEcart;
-
-            // 3. Statut entamé (priorité si reste < nombre originale)
-            // Cela signifie que la réservation a déjà été partiellement assignée
-            boolean entame1 = reste1 < r1.getNombre();
-            boolean entame2 = reste2 < r2.getNombre();
-            if (entame1 && !entame2)
-                return -1;
-            if (!entame1 && entame2)
-                return 1;
-
-            // 4. Taille croissante (du reste à placer)
-            int cmpTaille = Integer.compare(reste1, reste2);
-            if (cmpTaille != 0)
-                return cmpTaille;
-
-            // 5. Référence (stabilité)
-            return Integer.compare(r1.getReference(), r2.getReference());
-        });
-
-        return candidats.get(0);
-    }
-
-    /**
      * Finaliser un groupe: calculer les itinéraires et mettre à jour le tracking.
      */
     private void finaliserGroupe(RegroupementDTO groupe, List<VehiculePlanningDTO> vehiculesGroupe,
             TrackingData tracking, List<RegroupementDTO> regroupements) {
-        // Heure de départ = heure de la RÉSERVATION LA PLUS TARDIVE du groupe
+        // Heure de départ par défaut = heure de la RÉSERVATION LA PLUS TARDIVE du
+        // groupe
         List<Reservation> reservationsGroupe = groupe.getReservations();
         Time heureDepartTardifReservations = groupe.getHeureDepart();
         for (Reservation r : reservationsGroupe) {
@@ -961,26 +862,34 @@ public class PlanificationService {
             }
         }
 
-        // Vérifier si un véhicule impose un départ plus tardif (mais dans la limite
-        // acceptée)
-        Time heureDepartEffectif = heureDepartTardifReservations;
+        // Départ effectif par véhicule : respecter l'heure déjà fixée (départ
+        // anticipé) ou défaut = heureDepartTardifReservations, borné par la
+        // disponibilité du véhicule
+        Map<VehiculePlanningDTO, Time> departParVehicule = new HashMap<>();
+        Time heureDepartGroupe = heureDepartTardifReservations;
         for (VehiculePlanningDTO vp : vehiculesGroupe) {
+            Time depart = vp.getHeureDepart() != null ? vp.getHeureDepart() : heureDepartTardifReservations;
             Time dispoVehicule = tracking.heureRetourParVehicule.get(vp.getVehicule().getId());
-            if (dispoVehicule != null && dispoVehicule.after(heureDepartEffectif)) {
-                heureDepartEffectif = dispoVehicule;
+            if (dispoVehicule != null && dispoVehicule.after(depart)) {
+                depart = dispoVehicule;
+            }
+            departParVehicule.put(vp, depart);
+            if (depart != null && (heureDepartGroupe == null || depart.after(heureDepartGroupe))) {
+                heureDepartGroupe = depart;
             }
         }
-        Time heureDepartGroupe = heureDepartEffectif;
 
-        // Mettre à jour l'heure de départ du groupe pour la vue/UI
+        // Mettre à jour l'heure de départ du groupe pour la vue/UI (max des départs
+        // effectifs)
         groupe.setHeureDepart(heureDepartGroupe);
 
         Integer aeroportId = getAeroportId();
 
-        // Calculer les itinéraires avec l'heure de départ COMMUNE du groupe
+        // Calculer les itinéraires avec l'heure de départ propre à chaque véhicule
         for (VehiculePlanningDTO vp : vehiculesGroupe) {
+            vp.setHeureDepart(departParVehicule.get(vp));
             vp.setNombrePassagers(vp.calculerNombrePassagers());
-            calculerItineraire(vp, aeroportId, heureDepartGroupe);
+            calculerItineraire(vp, aeroportId, departParVehicule.get(vp));
 
             // Mettre à jour l'heure de retour du véhicule pour les groupes suivants
             tracking.heureRetourParVehicule.put(vp.getVehicule().getId(), vp.getHeureRetourAeroport());
@@ -1028,14 +937,6 @@ public class PlanificationService {
     }
 
     /**
-     * Ajouter une réservation au planning d'un véhicule
-     */
-    private void ajouterReservationAuPlanning(VehiculePlanningDTO vehiculePlanning,
-            Reservation resa, Integer aeroportId, int delaiAttente) {
-        ajouterReservationAuPlanning(vehiculePlanning, resa, aeroportId, delaiAttente, resa.getNombre());
-    }
-
-    /**
      * Ajouter une réservation au planning d'un véhicule (avec nombre spécifique de
      * passagers)
      */
@@ -1071,47 +972,16 @@ public class PlanificationService {
         Vehicule vehicule = vp.getVehicule();
         double vitesse = vehicule.getVitesseMoyenne();
 
-        // Trier les dépôts par proximité (nearest neighbor depuis TNR)
-        List<ReservationPlanningDTO> ordreDepot = new ArrayList<>();
-        List<ReservationPlanningDTO> restants = new ArrayList<>(reservations);
-        Integer posId = aeroportId;
-
-        while (!restants.isEmpty()) {
-            ReservationPlanningDTO plusProche = null;
-            double distMin = Double.MAX_VALUE;
-
-            for (ReservationPlanningDTO rp : restants) {
-                double dist = getDistance(posId, rp.getLieuHotelId());
-                if (dist < distMin) {
-                    distMin = dist;
-                    plusProche = rp;
-                } else if (dist == distMin && plusProche != null) {
-                    // À distance égale, choisir l'hôtel dont le nom vient en premier
-                    // alphabétiquement
-                    String libelleActuel = plusProche.getHotelLibelle() != null ? plusProche.getHotelLibelle() : "";
-                    String libelleCandidat = rp.getHotelLibelle() != null ? rp.getHotelLibelle() : "";
-                    if (libelleCandidat.compareToIgnoreCase(libelleActuel) < 0) {
-                        plusProche = rp;
-                    }
-                }
-            }
-            if (plusProche == null)
-                break;
-
-            ordreDepot.add(plusProche);
-            posId = plusProche.getLieuHotelId();
-            restants.remove(plusProche);
-        }
-
+        // Respecter l'ordre d'ajout (priorités déjà gérées en amont)
+        List<ReservationPlanningDTO> ordreDepot = new ArrayList<>(reservations);
         vp.setReservations(ordreDepot);
 
-        // Sprint 5: L'heure de départ est fixée par le groupe (passée en paramètre)
-        // Tous les véhicules du même groupe partent à la même heure
+        // L'heure de départ est fournie par l'appelant (peut être anticipée)
         vp.setHeureDepart(heureDepartGroupe);
 
         // Parcourir l'itinéraire : aéroport -> hôtel1 -> hôtel2 -> ... -> aéroport
         double distanceTotale = 0.0;
-        posId = aeroportId;
+        Integer posId = aeroportId;
         Time heureCourante = heureDepartGroupe;
 
         for (ReservationPlanningDTO rp : ordreDepot) {
