@@ -421,9 +421,9 @@ public class PlanificationService {
             Time debutIntervalleS = eventTime;
             Time finIntervalleS = eventTime; // l'heure de départ réelle sera recalculée plus tard
 
-            List<VehiculePlanningDTO> vehiculesGroupe = assignerVehiculesAuGroupe(
+                List<VehiculePlanningDTO> vehiculesGroupe = assignerVehiculesAuGroupe(
                     groupe, indicesGroupe, reservations, tracking, aeroportId,
-                    delaiAttente, vehiculesDisponibles, debutIntervalleS, finIntervalleS);
+                    delaiAttente, vehiculesDisponibles, debutIntervalleS, finIntervalleS, eventIsReturn);
 
             if (vehiculesGroupe != null && !vehiculesGroupe.isEmpty()) {
                 finaliserGroupe(groupe, vehiculesGroupe, tracking, regroupements);
@@ -633,10 +633,10 @@ public class PlanificationService {
      * - Diviser les réservations si nécessaire
      * - Prioriser les véhicules déjà utilisés
      */
-    private List<VehiculePlanningDTO> assignerVehiculesAuGroupe(
+        private List<VehiculePlanningDTO> assignerVehiculesAuGroupe(
             RegroupementDTO groupe, List<Integer> indicesGroupe, List<Reservation> reservations,
             TrackingData tracking, Integer aeroportId, int delaiAttente, List<Vehicule> vehiculesDisponibles,
-            Time debutIntervalle, Time finIntervalle) {
+            Time debutIntervalle, Time finIntervalle, boolean eventIsReturn) {
         // Données de travail
         Map<Reservation, Integer> remainingPax = new HashMap<>();
         Map<Reservation, Integer> originalIndices = new HashMap<>();
@@ -717,6 +717,11 @@ public class PlanificationService {
 
                 capaciteRestanteParVehicule.put(best, cap - aPrendre);
                 reste -= aPrendre;
+
+                // Si déclenchement par retour + non assignés et le véhicule devient plein
+                if (eventIsReturn && !phaseNonAssigne.isEmpty() && capaciteRestanteParVehicule.get(best) == 0) {
+                    vp.setHeureDepart(debutIntervalle); // départ immédiat
+                }
             }
 
             remainingPax.put(resa, reste);

@@ -40,6 +40,4 @@ Voici le plan de mise en conformité avec tes règles, et les écarts actuels du
 
 
 
-⭕ Départ immédiat si regroupement déclenché par retour + non assignés et le véhicule devient plein.
-⭕ Départ immédiat si non assignés présents et aucun vol dans l’intervalle (cas “aucun vol”).
 ⭕ Multi-véhicules revenant dans l’intervalle : ils rejoignent le même groupe, mais la logique de déclenchement par retour n’est pas encore en place.
