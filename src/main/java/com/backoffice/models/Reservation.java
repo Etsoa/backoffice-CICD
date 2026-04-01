@@ -37,7 +37,8 @@ public class Reservation {
     @Column(name = "client")
     private String client;
 
-    // Flag temporaire (non persistant) pour marquer les restes créés dans le groupement actuel
+    // Flag temporaire (non persistant) pour marquer les restes créés dans le
+    // groupement actuel
     private transient boolean isRemainderInCurrentGrouping = false;
 
     // Ordre de traitement pour la file d'attente (non persistant)
