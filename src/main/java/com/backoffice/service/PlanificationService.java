@@ -693,6 +693,14 @@ public class PlanificationService {
             capaciteRestanteParVehicule.put(v, v.getPlace());
         }
 
+        Time finFenetreIntervalle = ajouterMinutes(debutIntervalle, delaiAttente);
+        boolean retourDansIntervalle = vehiculesDisponibles.stream().anyMatch(v -> {
+            Time retour = tracking.heureRetourParVehicule.get(v.getId());
+            return retour != null && retour.compareTo(debutIntervalle) >= 0
+                    && retour.compareTo(finFenetreIntervalle) <= 0;
+        });
+        boolean retourDeclencheur = eventIsReturn || retourDansIntervalle;
+
         // Affectation par réservation (split immédiat si besoin)
         for (Reservation resa : ordreTraitement) {
             int reste = remainingPax.get(resa);
@@ -718,8 +726,9 @@ public class PlanificationService {
                 capaciteRestanteParVehicule.put(best, cap - aPrendre);
                 reste -= aPrendre;
 
-                // Si déclenchement par retour + non assignés et le véhicule devient plein
-                if (eventIsReturn && !phaseNonAssigne.isEmpty() && capaciteRestanteParVehicule.get(best) == 0) {
+                // Si déclenchement par retour (retour direct ou dans l'intervalle) + non
+                // assignés et le véhicule devient plein
+                if (retourDeclencheur && !phaseNonAssigne.isEmpty() && capaciteRestanteParVehicule.get(best) == 0) {
                     vp.setHeureDepart(debutIntervalle); // départ immédiat
                 }
             }
