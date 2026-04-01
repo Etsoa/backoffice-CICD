@@ -368,18 +368,19 @@ public class PlanificationService {
                 }
             }
 
-            // Ajouter résas dont l'heure est dans l'intervalle
+            // Ajouter résas dont l'heure est dans l'intervalle [eventTime, eventTime+delai]
             for (int i = 0; i < reservations.size(); i++) {
                 if (tracking.assignees[i])
                     continue;
                 Reservation r = reservations.get(i);
-                if (r.getHeure().compareTo(finIntervalle) <= 0) {
+                if (r.getHeure().compareTo(eventTime) >= 0 && r.getHeure().compareTo(finIntervalle) <= 0) {
                     groupe.ajouterReservation(r);
                 }
             }
 
             if (groupe.getReservations().isEmpty()) {
-                // Aucun passager dans l'intervalle : si event était un retour, on ignore cet événement
+                // Aucun passager dans l'intervalle : si event était un retour, on ignore cet
+                // événement
                 if (eventIsReturn) {
                     // Marquer ce retour comme consommé
                     for (Map.Entry<Integer, Time> e : tracking.heureRetourParVehicule.entrySet()) {
@@ -660,17 +661,21 @@ public class PlanificationService {
         // Tri des phases
         phaseNonAssigne.sort((r1, r2) -> {
             int cmpNb = Integer.compare(r2.getNombre(), r1.getNombre());
-            if (cmpNb != 0) return cmpNb;
+            if (cmpNb != 0)
+                return cmpNb;
             int cmpHeure = r1.getHeure().compareTo(r2.getHeure()); // ancienneté (plus tôt d'abord)
-            if (cmpHeure != 0) return cmpHeure;
+            if (cmpHeure != 0)
+                return cmpHeure;
             return Integer.compare(r1.getReference(), r2.getReference());
         });
 
         phaseVol.sort((r1, r2) -> {
             int cmpNb = Integer.compare(r2.getNombre(), r1.getNombre());
-            if (cmpNb != 0) return cmpNb;
+            if (cmpNb != 0)
+                return cmpNb;
             int cmpHeure = r1.getHeure().compareTo(r2.getHeure());
-            if (cmpHeure != 0) return cmpHeure;
+            if (cmpHeure != 0)
+                return cmpHeure;
             return Integer.compare(r1.getReference(), r2.getReference());
         });
 
@@ -755,7 +760,8 @@ public class PlanificationService {
         return groupe.getVehiculesAssignes();
     }
 
-    // Choisir le véhicule le plus adapté : capacité minimale ≥ besoin, tie-break Diesel>Essence, puis trajets
+    // Choisir le véhicule le plus adapté : capacité minimale ≥ besoin, tie-break
+    // Diesel>Essence, puis trajets
     private Vehicule choisirVehiculeOptimal(Map<Vehicule, Integer> capaciteRestanteParVehicule,
             TrackingData tracking, Reservation resa, int besoin) {
         Vehicule best = null;
@@ -787,7 +793,8 @@ public class PlanificationService {
             return best;
         }
 
-        // Aucun véhicule ne peut tout prendre : choisir celui avec le plus de capacité restante
+        // Aucun véhicule ne peut tout prendre : choisir celui avec le plus de capacité
+        // restante
         for (Map.Entry<Vehicule, Integer> e : capaciteRestanteParVehicule.entrySet()) {
             Vehicule v = e.getKey();
             int cap = e.getValue();
