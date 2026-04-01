@@ -356,18 +356,19 @@ public class PlanificationService {
                     delaiAttente);
 
             // 5. Assigner les véhicules et réservations
-            // Si AUCUN véhicule n'est disponible, on passe.
+            // Si AUCUN véhicule n'est disponible, marquer toutes les réservations du groupe
+            // comme non assignées pour qu'elles soient reportées au regroupement suivant.
             if (vehiculesDisponibles.isEmpty()) {
-                // On ne fait RIEn, tout le monde sera reporté.
-                // SAUF SI le groupe est vide? Non, il a au moins 'premiereDuGroupe'.
-                // On doit quand même appeler finaliser pour incrémenter le numéro de groupe si
-                // on veut garder une trace?
-                // Non, si on n'assigne rien, ce n'est pas un "vrai" départ.
-                // On marque juste les indices comme "reportés" pour le tour suivant?
-                // Mais le tour suivant est basé sur i+1...
-                // Si i n'est pas assigné, il sera "reporté" via mettreAJourIndicesReportees.
-                // Le problème c'est que si i n'est jamais traité, on boucle?
-                // Non, i avance.
+                for (Reservation r : groupe.getReservations()) {
+                    groupe.ajouterReservationNonAssignee(r);
+                    int idx = reservations.indexOf(r);
+                    if (idx >= 0) {
+                        tracking.assignees[idx] = false;
+                    }
+                }
+                // Mettre à jour les reportées et passer au groupe suivant
+                mettreAJourIndicesReportees(groupe, reservations, tracking);
+                continue;
             }
 
             // 5. Assigner les véhicules et réservations
@@ -491,9 +492,9 @@ public class PlanificationService {
 
         RegroupementDTO groupe = new RegroupementDTO(numeroGroupe, debutIntervalle, finIntervalle, delaiAttente);
 
-        // Tracker les réservations déjà ajoutées pour éviter les doublons DANS CE
-        // GROUPE
-        Set<Integer> resasIdsAjoutees = new HashSet<>();
+        // Tracker les indices des réservations déjà ajoutées pour éviter les doublons DANS CE GROUPE
+        // Utiliser les indices au lieu des IDs pour distinguer une réservation entière de son reste
+        Set<Integer> indicesAjoutes = new HashSet<>();
 
         // ATTENTION: La logique originale ajoutait premiereDuGroupe quoi qu'il arrive.
         // MAIS si premiereDuGroupe est très loin dans le temps par rapport aux
@@ -506,7 +507,8 @@ public class PlanificationService {
 
         // Ajouter la première réservation
         groupe.ajouterReservation(premiereDuGroupe);
-        resasIdsAjoutees.add(premiereDuGroupe.getId());
+        int indexPremiere = reservations.indexOf(premiereDuGroupe);
+        indicesAjoutes.add(indexPremiere);
 
         // Ajouter les réservations reportées du groupe précédent
         // On les ajoute SI ELLES RENTRENT dans l'intervalle [debut, fin].
@@ -514,29 +516,24 @@ public class PlanificationService {
         // Dans l'algo actuel, on les ajoute sans vérifier l'heure, ce qui est logique :
         // elles attendent depuis longtemps, donc elles sont prêtes.
         for (Integer indiceReporte : indicesReportees) {
-            if (indiceReporte >= 0 && indiceReporte < reservations.size()) {
+            if (indiceReporte >= 0 && indiceReporte < reservations.size() && !indicesAjoutes.contains(indiceReporte)) {
                 Reservation r = reservations.get(indiceReporte);
-                if (!resasIdsAjoutees.contains(r.getId())) {
-                    groupe.ajouterReservation(r);
-                    resasIdsAjoutees.add(r.getId());
-                }
+                groupe.ajouterReservation(r);
+                indicesAjoutes.add(indiceReporte);
             }
         }
-
-        // Trouver l'indice de la première réservation
-        int indexPremiere = reservations.indexOf(premiereDuGroupe);
 
         // Ajouter les réservations suivantes qui tombent dans l'intervalle
         for (int i = indexPremiere + 1; i < reservations.size(); i++) {
             Reservation resa = reservations.get(i);
 
-            if (resasIdsAjoutees.contains(resa.getId()))
+            if (indicesAjoutes.contains(i))
                 continue;
 
             // Si la réservation est dans l'intervalle [debut, fin]
             if (resa.getHeure().compareTo(finIntervalle) <= 0) {
                 groupe.ajouterReservation(resa);
-                resasIdsAjoutees.add(resa.getId());
+                indicesAjoutes.add(i);
             } else {
                 // Dès qu'on dépasse, on arrête car la liste est triée
                 break;
@@ -890,10 +887,15 @@ public class PlanificationService {
      */
     private void finaliserGroupe(RegroupementDTO groupe, List<VehiculePlanningDTO> vehiculesGroupe,
             TrackingData tracking, List<RegroupementDTO> regroupements) {
-        // Heure de départ = heure de la DERNIÈRE réservation du groupe
+        // Heure de départ = heure de la RÉSERVATION LA PLUS TARDIVE du groupe
         List<Reservation> reservationsGroupe = groupe.getReservations();
-        Time heureDepartTardifReservations = reservationsGroupe.isEmpty() ? groupe.getHeureDepart()
-                : reservationsGroupe.get(reservationsGroupe.size() - 1).getHeure();
+        Time heureDepartTardifReservations = groupe.getHeureDepart();
+        for (Reservation r : reservationsGroupe) {
+            if (r.getHeure() != null && (heureDepartTardifReservations == null
+                    || r.getHeure().after(heureDepartTardifReservations))) {
+                heureDepartTardifReservations = r.getHeure();
+            }
+        }
 
         // Vérifier si un véhicule impose un départ plus tardif (mais dans la limite
         // acceptée)
@@ -932,8 +934,10 @@ public class PlanificationService {
 
         for (Reservation r : groupe.getReservationsNonAssignees()) {
             // Trouver l'indice de cette réservation dans le tableau principal
+            // Chercher par référence d'objet (==) plutôt que par ID pour éviter les faux positifs
+            // quand une réservation est splittée (le reste a le même ID que l'original)
             for (int j = 0; j < reservations.size(); j++) {
-                if (reservations.get(j).getId().equals(r.getId()) && !tracking.assignees[j]) {
+                if (reservations.get(j) == r && !tracking.assignees[j]) {
                     tracking.indicesReportees.add(j);
                     break;
                 }
