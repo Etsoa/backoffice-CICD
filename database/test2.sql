@@ -141,6 +141,27 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
 (6002, 10, '2026-04-02', '08:40:00', 2, 'C002');
 
 -- ============================================
+-- SCENARIO 7: Tony Final Test (Real Use Case)
+-- Date: 2026-03-25
+-- Véhicules: V1 (12 places, Diesel, dispo 11:45), V2 (14 places, Diesel, dispo 12:14)
+-- Réservations: 
+--   C1 (7 à 08:00), C2 (10 à 12:00), C3 (7 à 12:10), C4 (3 à 12:20)
+-- Attendu: 
+--   Groupe 1 (08:00): V1 -> C1 (7 pax)
+--   Groupe 2 (12:20): V2 -> C2 (10 pax), V1 -> C3 (2 pax - split de 7)
+--   Groupe 3 (14:10): V1 -> C4 (3 pax), C3 reste (5 pax)
+-- ============================================
+INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES
+('Vehicule1_Tony', 12, 1, 50.00, '11:45:00'),
+('Vehicule2_Tony', 14, 1, 50.00, '12:14:00');
+
+INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
+(7001, 7, '2026-03-25', '08:00:00', 2, 'C001'),
+(7002, 10, '2026-03-25', '12:00:00', 2, 'C002'),
+(7003, 7, '2026-03-25', '12:10:00', 2, 'C003'),
+(7004, 3, '2026-03-25', '12:20:00', 2, 'C004');
+
+-- ============================================
 -- NOTES SUR L'UTILISATION
 -- ============================================
 -- Charger ces données: 
@@ -153,6 +174,7 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
 --   S4: réf 4001
 --   S5: réf 5001-5004
 --   S6: réf 6001-6002
+--   S7 (Tony): réf 7001-7004 (date 2026-03-25)
 --
 -- Les véhicules sont dédiés par scénario (noms: V*_S*) pour éviter interférences
 --
@@ -163,3 +185,4 @@ INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
 --   S4: Priorité type carburant (Diesel > Essence)
 --   S5: Assignment complexe multi-véhicules
 --   S6: Validation temps d'attente et regroupement
+--   S7 (Tony): Cas réel complexe avec splits et multi-groupes
