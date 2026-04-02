@@ -17,6 +17,7 @@ public class VehiculePlanningDTO {
     private Time heureDebutIntervalle; // Début de l'intervalle de regroupement
     private Time heureFinIntervalle;   // Fin de l'intervalle (= heure de départ)
     private Integer nombrePassagers;   // Nombre total de passagers dans ce véhicule
+    private String modeDepart;         // EN_GROUPE | SOLO
 
     public VehiculePlanningDTO() {
         this.reservations = new ArrayList<>();
@@ -95,6 +96,25 @@ public class VehiculePlanningDTO {
 
     public void setNombrePassagers(Integer nombrePassagers) {
         this.nombrePassagers = nombrePassagers;
+    }
+
+    public String getModeDepart() {
+        return modeDepart;
+    }
+
+    public void setModeDepart(String modeDepart) {
+        this.modeDepart = modeDepart;
+    }
+
+    public String getModeDepartLabel() {
+        if (modeDepart == null) {
+            return "Départ en groupe";
+        }
+        return switch (modeDepart) {
+            case "SOLO" -> "Départ seul";
+            case "EN_GROUPE" -> "Départ en groupe";
+            default -> modeDepart;
+        };
     }
     
     /**

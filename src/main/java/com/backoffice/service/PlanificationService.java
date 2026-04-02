@@ -261,8 +261,8 @@ public class PlanificationService {
     private int getPrioriteCarburant(Vehicule v) {
         String code = v.getTypeCarburant() != null ? v.getTypeCarburant().getCode() : "";
         return switch (code) {
-            case "D" -> 1; // Diesel - priorité maximale
-            case "Es" -> 2; // Essence - deuxième priorité
+            case "D", "DIESEL" -> 1; // Diesel - priorité maximale
+            case "Es", "ESSENCE" -> 2; // Essence - deuxième priorité
             default -> 3; // Autres (Hybride, Electrique, etc.) - même priorité, random
         };
     }
@@ -324,11 +324,13 @@ public class PlanificationService {
         // Timeline combinée (réservations + retours véhicules)
         while (true) {
             Time nextResaTime = null;
-            for (Reservation r : reservations) {
-                if (!tracking.assignees[reservations.indexOf(r)]) {
-                    if (nextResaTime == null || r.getHeure().before(nextResaTime)) {
-                        nextResaTime = r.getHeure();
-                    }
+            for (int i = 0; i < reservations.size(); i++) {
+                if (tracking.assignees[i] || tracking.indicesReportees.contains(i)) {
+                    continue;
+                }
+                Reservation r = reservations.get(i);
+                if (nextResaTime == null || r.getHeure().before(nextResaTime)) {
+                    nextResaTime = r.getHeure();
                 }
             }
 
@@ -359,6 +361,7 @@ public class PlanificationService {
 
             Time finIntervalle = ajouterMinutes(eventTime, delaiAttente);
             RegroupementDTO groupe = new RegroupementDTO(numeroGroupe, eventTime, finIntervalle, delaiAttente);
+            groupe.setTypeDeclencheur(determinerTypeDeclencheur(eventIsReturn, eventTime, tracking));
 
             // Ajouter reportées
             for (Integer idxRep : tracking.indicesReportees) {
@@ -473,6 +476,41 @@ public class PlanificationService {
         }
 
         return regroupements;
+    }
+
+    /**
+     * Déterminer le type de déclencheur du regroupement.
+     */
+    private String determinerTypeDeclencheur(boolean eventIsReturn, Time eventTime, TrackingData tracking) {
+        if (!eventIsReturn) {
+            return "VOL";
+        }
+
+        boolean retourVehicule = false;
+        boolean debutDisponibilite = false;
+
+        for (Map.Entry<Integer, Time> e : tracking.heureRetourParVehicule.entrySet()) {
+            Time heure = e.getValue();
+            if (heure == null || !heure.equals(eventTime)) {
+                continue;
+            }
+
+            int nbTrajets = tracking.nombreTrajetsParVehicule.getOrDefault(e.getKey(), 0);
+            if (nbTrajets > 0) {
+                retourVehicule = true;
+            } else {
+                debutDisponibilite = true;
+            }
+        }
+
+        if (retourVehicule) {
+            return "RETOUR_VEHICULE";
+        }
+        if (debutDisponibilite) {
+            return "DEBUT_DISPONIBILITE";
+        }
+
+        return "RETOUR_VEHICULE";
     }
 
     /**
@@ -889,6 +927,12 @@ public class PlanificationService {
         for (VehiculePlanningDTO vp : vehiculesGroupe) {
             vp.setHeureDepart(departParVehicule.get(vp));
             vp.setNombrePassagers(vp.calculerNombrePassagers());
+            if (heureDepartGroupe != null && departParVehicule.get(vp) != null
+                    && departParVehicule.get(vp).before(heureDepartGroupe)) {
+                vp.setModeDepart("SOLO");
+            } else {
+                vp.setModeDepart("EN_GROUPE");
+            }
             calculerItineraire(vp, aeroportId, departParVehicule.get(vp));
 
             // Mettre à jour l'heure de retour du véhicule pour les groupes suivants

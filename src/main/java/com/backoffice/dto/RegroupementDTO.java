@@ -20,6 +20,7 @@ public class RegroupementDTO {
     private Time heureFin; // heureDebut + délai d'attente (fin de l'intervalle)
     private Time heureDepart; // Heure de départ commune = heure de la DERNIÈRE réservation
     private int delaiAttenteMinutes;
+    private String typeDeclencheur; // VOL | RETOUR_VEHICULE | DEBUT_DISPONIBILITE
 
     private List<Reservation> reservations;
     private List<VehiculePlanningDTO> vehiculesAssignes;
@@ -124,6 +125,26 @@ public class RegroupementDTO {
 
     public void setDelaiAttenteMinutes(int delaiAttenteMinutes) {
         this.delaiAttenteMinutes = delaiAttenteMinutes;
+    }
+
+    public String getTypeDeclencheur() {
+        return typeDeclencheur;
+    }
+
+    public void setTypeDeclencheur(String typeDeclencheur) {
+        this.typeDeclencheur = typeDeclencheur;
+    }
+
+    public String getTypeDeclencheurLabel() {
+        if (typeDeclencheur == null) {
+            return "Non défini";
+        }
+        return switch (typeDeclencheur) {
+            case "VOL" -> "Vol (réservation)";
+            case "RETOUR_VEHICULE" -> "Retour véhicule";
+            case "DEBUT_DISPONIBILITE" -> "Début disponibilité véhicule";
+            default -> typeDeclencheur;
+        };
     }
 
     public List<Reservation> getReservations() {
