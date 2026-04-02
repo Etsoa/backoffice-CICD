@@ -11,9 +11,7 @@
 -- Types de carburant
 INSERT INTO type_carburant (code, libelle) VALUES
 ('D', 'Diesel'),
-('Es', 'Essence'),
-('H', 'Hybride'),
-('El', 'Electrique');
+('Es', 'Essence');
 
 -- Clients
 INSERT INTO client (id_client, nom, prenom, email) VALUES

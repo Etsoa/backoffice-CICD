@@ -98,7 +98,7 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <i class="fas fa-building"></i>
-            <span>BackOffice ETU3341 -3256 -3326</span>
+            <span>BackOffice <br>3341 -3256 -3326</span>
         </div>
         <nav class="sidebar-nav">
             <a href="${pageContext.request.contextPath}/">
