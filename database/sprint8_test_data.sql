@@ -9,8 +9,8 @@ INSERT INTO type_carburant (code, libelle) VALUES
 -- VÉHICULES
 -- ============================================
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES
-('V1', 8, 1, 60, '08:00:00'),  -- Diesel
-('V2', 6, 1, 60, '08:00:00'),  -- Diesel
+('V1', 8, 1, 60, '10:00:00'),  -- Diesel
+('V2', 6, 1, 60, '10:00:00'),  -- Diesel
 ('V3', 10, 2, 60, '08:30:00'), -- Essence
 ('V4', 4, 2, 60, '09:00:00');  -- Essence
 

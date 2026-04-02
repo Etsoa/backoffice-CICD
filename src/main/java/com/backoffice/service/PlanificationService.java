@@ -694,7 +694,9 @@ public class PlanificationService {
         List<Reservation> phaseVol = new ArrayList<>();
         for (Integer idx : indicesGroupe) {
             Reservation r = reservations.get(idx);
-            if (!tracking.assignees[idx]) {
+            // Phase 1 = uniquement les réservations réellement reportées d'un groupe
+            // précédent
+            if (tracking.indicesReportees.contains(idx)) {
                 phaseNonAssigne.add(r);
             } else {
                 phaseVol.add(r);
@@ -759,7 +761,9 @@ public class PlanificationService {
                     VehiculePlanningDTO dto = new VehiculePlanningDTO(v);
                     dto.setHeureDebutIntervalle(debutIntervalle);
                     dto.setHeureFinIntervalle(finIntervalle);
-                    dto.setHeureDepart(finIntervalle);
+                    // Pas de départ par défaut ici : la finalisation décidera
+                    // (dernier vol), sauf cas de départ immédiat explicitement marqués.
+                    dto.setHeureDepart(null);
                     return dto;
                 });
 
@@ -912,7 +916,7 @@ public class PlanificationService {
         Time heureDepartGroupe = heureDepartTardifReservations;
         boolean groupeAvecVol = groupe.isContientVolDansIntervalle();
         boolean groupeDeclencheParRetour = "RETOUR_VEHICULE".equals(groupe.getTypeDeclencheur())
-            || "DEBUT_DISPONIBILITE".equals(groupe.getTypeDeclencheur());
+                || "DEBUT_DISPONIBILITE".equals(groupe.getTypeDeclencheur());
         for (VehiculePlanningDTO vp : vehiculesGroupe) {
             Time depart = vp.getHeureDepart() != null ? vp.getHeureDepart() : heureDepartTardifReservations;
             Time dispoVehicule = tracking.heureRetourParVehicule.get(vp.getVehicule().getId());
