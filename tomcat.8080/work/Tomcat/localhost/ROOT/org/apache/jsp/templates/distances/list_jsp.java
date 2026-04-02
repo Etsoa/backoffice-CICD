@@ -200,7 +200,7 @@ public final class list_jsp extends org.apache.jasper.runtime.HttpJspBase
       out.write("    <aside class=\"sidebar\">\r\n");
       out.write("        <div class=\"sidebar-brand\">\r\n");
       out.write("            <i class=\"fas fa-building\"></i>\r\n");
-      out.write("            <span>BackOffice</span>\r\n");
+      out.write("            <span>BackOffice ETU3341 -3256 -3326</span>\r\n");
       out.write("        </div>\r\n");
       out.write("        <nav class=\"sidebar-nav\">\r\n");
       out.write("            <a href=\"");

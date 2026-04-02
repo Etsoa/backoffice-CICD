@@ -57,6 +57,7 @@
         .groupe-header .groupe-title { font-size: 16px; font-weight: 700; color: #1e293b; }
         .groupe-header .groupe-info { display: flex; gap: 16px; font-size: 13px; color: #64748b; }
         .groupe-header .groupe-depart { background: #16a34a; color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+        .groupe-header .groupe-trigger { background: #0ea5e9; color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px; }
         
         .groupe-content { padding: 16px 24px; }
 
@@ -67,6 +68,7 @@
         .vehicle-header .vh-ref { font-size: 15px; font-weight: 700; color: #1e293b; }
         .vehicle-header .vh-meta { display: flex; gap: 14px; font-size: 12px; color: #64748b; flex-wrap: wrap; }
         .vehicle-header .vh-count { font-size: 12px; color: #64748b; }
+        .vehicle-header .vh-depart-mode { background: #f59e0b; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
 
         .planning-table { width: 100%; border-collapse: collapse; background: #fff; }
         .planning-table thead th { padding: 10px 16px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
@@ -96,7 +98,7 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <i class="fas fa-building"></i>
-            <span>BackOffice</span>
+            <span>BackOffice <br>3341 -3256 -3326</span>
         </div>
         <nav class="sidebar-nav">
             <a href="${pageContext.request.contextPath}/">
@@ -198,6 +200,7 @@
                         <div class="groupe-info">
                             <span>Intervalle : <%= groupe.getHeureDebut() %> - <%= groupe.getHeureFin() %></span>
                             <span><%= groupe.getReservations().size() %> résa(s) | <%= groupe.getNombrePersonnesTotal() %> pers | <%= groupe.getVehiculesAssignes().size() %> véhicule(s)</span>
+                            <span class="groupe-trigger">Déclencheur : <%= groupe.getTypeDeclencheurLabel() %></span>
                             <span class="groupe-depart">DÉPART : <%= groupe.getHeureDepart() %></span>
                         </div>
                     </div>
@@ -215,10 +218,7 @@
                                         <span><%= vehiculePlanning.getVehicule().getTypeCarburant().getLibelle() %></span>
                                         <span><%= vehiculePlanning.getDestinationString() %></span>
                                         <span><%= String.format("%.1f", vehiculePlanning.getDistanceTotale()) %> km</span>
-                                        <span style="color: #059669; font-weight: 600;">
-                                            <i class="fas fa-hourglass-half"></i>
-                                            <%= String.format("%.0f", vehiculePlanning.getDistanceTotale() / vehiculePlanning.getVehicule().getVitesseMoyenne() * 60) %> min
-                                        </span>
+                                        <span class="vh-depart-mode"><%= vehiculePlanning.getModeDepartLabel() %></span>
                                     </div>
                                     <span class="vh-count"><%= vehiculePlanning.getReservations().size() %> résa(s)</span>
                                 </div>
@@ -228,8 +228,8 @@
                                         <tr>
                                             <th>Ordre</th>
                                             <th>Référence</th>
-                                            <th>Client</th>
                                             <th>Hôtel</th>
+                                            <th>Client</th>
                                             <th>Personnes</th>
                                             <th>Heure RDV</th>
                                             <th>Départ segment</th>
@@ -243,8 +243,8 @@
                                         <tr>
                                             <td><%= ordre++ %></td>
                                             <td class="td-ref">#<%= resPlanning.getReservation().getReference() %></td>
-                                            <td style="color: #7c3aed; font-weight: 600;"><%= resPlanning.getReservation().getClient() %></td>
                                             <td class="td-hotel"><%= resPlanning.getHotelLibelle() %></td>
+                                            <td><%= resPlanning.getReservation().getClient() != null ? resPlanning.getReservation().getClient() : "" %></td>
                                             <td><%= resPlanning.getNombrePassagers() %></td>
                                             <td class="td-time"><%= resPlanning.getReservation().getHeure() %></td>
                                             <td class="td-time"><%= resPlanning.getHeureDepart() %></td>

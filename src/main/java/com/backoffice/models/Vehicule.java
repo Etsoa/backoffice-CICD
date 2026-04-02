@@ -37,6 +37,7 @@ public class Vehicule {
     private Time heureDisponibilite;
 
     public Vehicule() {
+        this.heureDisponibilite = Time.valueOf("00:00:00");
     }
 
     public Integer getId() {

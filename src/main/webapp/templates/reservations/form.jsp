@@ -1,14 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
 <%@ page import="com.backoffice.models.Hotel" %>
-<%@ page import="com.backoffice.models.Client" %>
 <%@ page import="com.backoffice.models.Reservation" %>
 <%
     Boolean editMode = (Boolean) request.getAttribute("editMode");
     boolean isEdit = editMode != null && editMode;
     Reservation reservation = (Reservation) request.getAttribute("reservation");
     List<Hotel> hotels = (List<Hotel>) request.getAttribute("hotels");
-    List<Client> clients = (List<Client>) request.getAttribute("clients");
 %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -64,7 +62,7 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <i class="fas fa-building"></i>
-            <span>BackOffice</span>
+            <span>BackOffice <br>3341 -3256 -3326</span>
         </div>
         <nav class="sidebar-nav">
             <a href="${pageContext.request.contextPath}/">
@@ -138,17 +136,9 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="client"><i class="fas fa-user"></i> Client</label>
-                        <select id="client" name="client" class="form-control">
-                            <option value="">-- Selectionner un client --</option>
-                            <% if (clients != null) {
-                                for (Client c : clients) {
-                                    boolean selected = isEdit && reservation != null && reservation.getClient() != null && 
-                                                       reservation.getClient().equals(c.getIdClient());
-                            %>
-                            <option value="<%= c.getIdClient() %>" <%= selected ? "selected" : "" %>><%= c.getPrenom() %> <%= c.getNom() %> (<%= c.getIdClient() %>)</option>
-                            <% }} %>
-                        </select>
+                        <label for="client"><i class="fas fa-user"></i> Nom du client</label>
+                        <input type="text" id="client" name="client" class="form-control" placeholder="Nom du client"
+                               value="<%= isEdit && reservation != null && reservation.getClient() != null ? reservation.getClient() : "" %>"/>
                     </div>
 
                     <div class="form-actions">

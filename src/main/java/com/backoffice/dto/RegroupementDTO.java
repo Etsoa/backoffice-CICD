@@ -2,9 +2,7 @@ package com.backoffice.dto;
 
 import java.sql.Time;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.backoffice.models.Reservation;
 
@@ -22,18 +20,17 @@ public class RegroupementDTO {
     private Time heureFin; // heureDebut + délai d'attente (fin de l'intervalle)
     private Time heureDepart; // Heure de départ commune = heure de la DERNIÈRE réservation
     private int delaiAttenteMinutes;
+    private String typeDeclencheur; // VOL | RETOUR_VEHICULE | DEBUT_DISPONIBILITE
+    private boolean contientVolDansIntervalle;
 
     private List<Reservation> reservations;
     private List<VehiculePlanningDTO> vehiculesAssignes;
     private List<Reservation> reservationsNonAssignees; // Réservations sans véhicule disponible
-    private Map<Integer, Integer> passagersReportesParReservation; // Nombre de passagers reportés par réservation ID
-    private int nombreReservationsReportees; // Nombre de réservations reportées au début de la liste
 
     public RegroupementDTO() {
         this.reservations = new ArrayList<>();
         this.vehiculesAssignes = new ArrayList<>();
         this.reservationsNonAssignees = new ArrayList<>();
-        this.passagersReportesParReservation = new HashMap<>();
     }
 
     public RegroupementDTO(int numeroGroupe, Time heureDebut, Time heureFin, int delaiAttenteMinutes) {
@@ -131,6 +128,34 @@ public class RegroupementDTO {
         this.delaiAttenteMinutes = delaiAttenteMinutes;
     }
 
+    public String getTypeDeclencheur() {
+        return typeDeclencheur;
+    }
+
+    public void setTypeDeclencheur(String typeDeclencheur) {
+        this.typeDeclencheur = typeDeclencheur;
+    }
+
+    public String getTypeDeclencheurLabel() {
+        if (typeDeclencheur == null) {
+            return "Non défini";
+        }
+        return switch (typeDeclencheur) {
+            case "VOL" -> "Vol (réservation)";
+            case "RETOUR_VEHICULE" -> "Retour véhicule";
+            case "DEBUT_DISPONIBILITE" -> "Début disponibilité véhicule";
+            default -> typeDeclencheur;
+        };
+    }
+
+    public boolean isContientVolDansIntervalle() {
+        return contientVolDansIntervalle;
+    }
+
+    public void setContientVolDansIntervalle(boolean contientVolDansIntervalle) {
+        this.contientVolDansIntervalle = contientVolDansIntervalle;
+    }
+
     public List<Reservation> getReservations() {
         return reservations;
     }
@@ -166,14 +191,6 @@ public class RegroupementDTO {
 
         // Ajouter à la liste des non assignées
         this.reservationsNonAssignees.add(resa);
-    }
-
-    public int getNombreReservationsReportees() {
-        return nombreReservationsReportees;
-    }
-
-    public void setNombreReservationsReportees(int nombreReservationsReportees) {
-        this.nombreReservationsReportees = nombreReservationsReportees;
     }
 
     public boolean hasReservationsNonAssignees() {

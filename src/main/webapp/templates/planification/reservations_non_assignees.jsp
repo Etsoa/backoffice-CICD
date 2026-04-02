@@ -72,7 +72,7 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <i class="fas fa-building"></i>
-            <span>BackOffice</span>
+            <span>BackOffice <br>3341 -3256 -3326</span>
         </div>
         <nav class="sidebar-nav">
             <a href="${pageContext.request.contextPath}/">
@@ -134,6 +134,7 @@
                                 <th>Heure RDV</th>
                                 <th>Personnes</th>
                                 <th>Hôtel</th>
+                                <th>Client</th>
                                 <th>Statut</th>
                             </tr>
                         </thead>
@@ -148,6 +149,7 @@
                                     </span>
                                 </td>
                                 <td>Hôtel ID: <%= resa.getHotel() %></td>
+                                <td><%= resa.getClient() != null ? resa.getClient() : "Non spécifié" %></td>
                                 <td>
                                     <span class="badge badge-warning">
                                         <i class="fas fa-car-crash"></i> Sans véhicule
