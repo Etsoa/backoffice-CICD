@@ -372,14 +372,19 @@ public class PlanificationService {
             }
 
             // Ajouter résas dont l'heure est dans l'intervalle [eventTime, eventTime+delai]
+            boolean contientVolDansIntervalle = false;
             for (int i = 0; i < reservations.size(); i++) {
                 if (tracking.assignees[i])
                     continue;
                 Reservation r = reservations.get(i);
                 if (r.getHeure().compareTo(eventTime) >= 0 && r.getHeure().compareTo(finIntervalle) <= 0) {
                     groupe.ajouterReservation(r);
+                    if (!tracking.indicesReportees.contains(i)) {
+                        contientVolDansIntervalle = true;
+                    }
                 }
             }
+            groupe.setContientVolDansIntervalle(contientVolDansIntervalle);
 
             if (groupe.getReservations().isEmpty()) {
                 // Aucun passager dans l'intervalle : si event était un retour, on ignore cet
@@ -905,6 +910,9 @@ public class PlanificationService {
         // disponibilité du véhicule
         Map<VehiculePlanningDTO, Time> departParVehicule = new HashMap<>();
         Time heureDepartGroupe = heureDepartTardifReservations;
+        boolean groupeAvecVol = groupe.isContientVolDansIntervalle();
+        boolean groupeDeclencheParRetour = "RETOUR_VEHICULE".equals(groupe.getTypeDeclencheur())
+            || "DEBUT_DISPONIBILITE".equals(groupe.getTypeDeclencheur());
         for (VehiculePlanningDTO vp : vehiculesGroupe) {
             Time depart = vp.getHeureDepart() != null ? vp.getHeureDepart() : heureDepartTardifReservations;
             Time dispoVehicule = tracking.heureRetourParVehicule.get(vp.getVehicule().getId());
@@ -927,13 +935,17 @@ public class PlanificationService {
         for (VehiculePlanningDTO vp : vehiculesGroupe) {
             vp.setHeureDepart(departParVehicule.get(vp));
             vp.setNombrePassagers(vp.calculerNombrePassagers());
-            if (heureDepartGroupe != null && departParVehicule.get(vp) != null
-                    && departParVehicule.get(vp).before(heureDepartGroupe)) {
+            Time departVehicule = departParVehicule.get(vp);
+            boolean departAnticipe = heureDepartGroupe != null && departVehicule != null
+                    && departVehicule.before(heureDepartGroupe);
+            if (groupeDeclencheParRetour && groupeAvecVol && !departAnticipe) {
+                vp.setModeDepart("EN_GROUPE");
+            } else if (groupeDeclencheParRetour) {
                 vp.setModeDepart("SOLO");
             } else {
                 vp.setModeDepart("EN_GROUPE");
             }
-            calculerItineraire(vp, aeroportId, departParVehicule.get(vp));
+            calculerItineraire(vp, aeroportId, departVehicule);
 
             // Mettre à jour l'heure de retour du véhicule pour les groupes suivants
             tracking.heureRetourParVehicule.put(vp.getVehicule().getId(), vp.getHeureRetourAeroport());

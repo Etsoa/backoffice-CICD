@@ -21,6 +21,7 @@ public class RegroupementDTO {
     private Time heureDepart; // Heure de départ commune = heure de la DERNIÈRE réservation
     private int delaiAttenteMinutes;
     private String typeDeclencheur; // VOL | RETOUR_VEHICULE | DEBUT_DISPONIBILITE
+    private boolean contientVolDansIntervalle;
 
     private List<Reservation> reservations;
     private List<VehiculePlanningDTO> vehiculesAssignes;
@@ -145,6 +146,14 @@ public class RegroupementDTO {
             case "DEBUT_DISPONIBILITE" -> "Début disponibilité véhicule";
             default -> typeDeclencheur;
         };
+    }
+
+    public boolean isContientVolDansIntervalle() {
+        return contientVolDansIntervalle;
+    }
+
+    public void setContientVolDansIntervalle(boolean contientVolDansIntervalle) {
+        this.contientVolDansIntervalle = contientVolDansIntervalle;
     }
 
     public List<Reservation> getReservations() {

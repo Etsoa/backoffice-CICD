@@ -12,12 +12,12 @@ public class VehiculePlanningDTO {
     private Time heureRetourAeroport; // Heure de retour à l'aéroport
     private Time heureDepart; // Heure de départ du véhicule de l'aéroport
     private Double distanceTotale; // Distance totale du trajet en km
-    
+
     // Sprint 5: Informations sur l'intervalle de regroupement
     private Time heureDebutIntervalle; // Début de l'intervalle de regroupement
-    private Time heureFinIntervalle;   // Fin de l'intervalle (= heure de départ)
-    private Integer nombrePassagers;   // Nombre total de passagers dans ce véhicule
-    private String modeDepart;         // EN_GROUPE | SOLO
+    private Time heureFinIntervalle; // Fin de l'intervalle (= heure de départ)
+    private Integer nombrePassagers; // Nombre total de passagers dans ce véhicule
+    private String modeDepart; // EN_GROUPE | SOLO
 
     public VehiculePlanningDTO() {
         this.reservations = new ArrayList<>();
@@ -71,9 +71,9 @@ public class VehiculePlanningDTO {
     public void setDistanceTotale(Double distanceTotale) {
         this.distanceTotale = distanceTotale;
     }
-    
+
     // Sprint 5: Getters et Setters pour l'intervalle de regroupement
-    
+
     public Time getHeureDebutIntervalle() {
         return heureDebutIntervalle;
     }
@@ -116,12 +116,13 @@ public class VehiculePlanningDTO {
             default -> modeDepart;
         };
     }
-    
+
     /**
      * Calculer le nombre total de passagers à partir des réservations
      */
     public int calculerNombrePassagers() {
-        if (reservations == null) return 0;
+        if (reservations == null)
+            return 0;
         int total = 0;
         for (ReservationPlanningDTO rp : reservations) {
             if (rp.getNombrePassagers() != null) {
