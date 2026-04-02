@@ -750,7 +750,7 @@ public class PlanificationService {
         for (Reservation resa : ordreTraitement) {
             int reste = remainingPax.get(resa);
             while (reste > 0) {
-                Vehicule best = choisirVehiculeOptimal(capaciteRestanteParVehicule, tracking, resa, reste);
+                Vehicule best = choisirVehiculeOptimal(capaciteRestanteParVehicule, tracking, reste);
                 if (best == null) {
                     break; // plus de capacité disponible
                 }
@@ -833,7 +833,43 @@ public class PlanificationService {
     // Tie-break : moins de trajets, puis carburant (Diesel>Essence), puis plus
     // petite capacité si encore égal
     private Vehicule choisirVehiculeOptimal(Map<Vehicule, Integer> capaciteRestanteParVehicule,
-            TrackingData tracking, Reservation resa, int besoin) {
+            TrackingData tracking, int besoin) {
+        // Règle de remplissage : si un véhicule est déjà entamé dans CE groupe,
+        // on privilégie son remplissage (split possible) en prenant la capacité la plus
+        // proche du besoin.
+        Vehicule bestEntame = null;
+        int bestEcartEntame = Integer.MAX_VALUE;
+        for (Map.Entry<Vehicule, Integer> e : capaciteRestanteParVehicule.entrySet()) {
+            Vehicule v = e.getKey();
+            int cap = e.getValue();
+            if (cap <= 0)
+                continue;
+            boolean entameDansGroupe = cap < v.getPlace();
+            if (!entameDansGroupe)
+                continue;
+
+            int ecart = Math.abs(besoin - cap);
+            if (bestEntame == null || ecart < bestEcartEntame) {
+                bestEntame = v;
+                bestEcartEntame = ecart;
+            } else if (bestEntame != null && ecart == bestEcartEntame) {
+                int trajV = tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0);
+                int trajBest = tracking.nombreTrajetsParVehicule.getOrDefault(bestEntame.getId(), 0);
+                if (trajV < trajBest) {
+                    bestEntame = v;
+                } else if (trajV == trajBest) {
+                    int prioFuel = Integer.compare(getPrioriteCarburant(v), getPrioriteCarburant(bestEntame));
+                    if (prioFuel < 0) {
+                        bestEntame = v;
+                    }
+                }
+            }
+        }
+
+        if (bestEntame != null) {
+            return bestEntame;
+        }
+
         Vehicule best = null;
         for (Map.Entry<Vehicule, Integer> e : capaciteRestanteParVehicule.entrySet()) {
             Vehicule v = e.getKey();
