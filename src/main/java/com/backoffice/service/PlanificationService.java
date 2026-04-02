@@ -873,6 +873,44 @@ public class PlanificationService {
             }
         }
 
+        // Pour les non-assignés : à disponibilité égale, prendre la capacité la plus
+        // proche du besoin (même si cap < besoin), puis split immédiat si nécessaire.
+        if (prioriserDisponibilite && candidatsDisponibilite != null && !candidatsDisponibilite.isEmpty()) {
+            Vehicule bestProche = null;
+            int bestEcart = Integer.MAX_VALUE;
+            for (Vehicule v : candidatsDisponibilite) {
+                int cap = capaciteRestanteParVehicule.getOrDefault(v, 0);
+                if (cap <= 0) {
+                    continue;
+                }
+                int ecart = Math.abs(besoin - cap);
+                if (bestProche == null || ecart < bestEcart) {
+                    bestProche = v;
+                    bestEcart = ecart;
+                } else if (bestProche != null && ecart == bestEcart) {
+                    // Tie-break: préférer la plus petite capacité (meilleur fit), puis
+                    // trajets, puis carburant
+                    if (v.getPlace() < bestProche.getPlace()) {
+                        bestProche = v;
+                    } else if (v.getPlace() == bestProche.getPlace()) {
+                        int trajV = tracking.nombreTrajetsParVehicule.getOrDefault(v.getId(), 0);
+                        int trajBest = tracking.nombreTrajetsParVehicule.getOrDefault(bestProche.getId(), 0);
+                        if (trajV < trajBest) {
+                            bestProche = v;
+                        } else if (trajV == trajBest) {
+                            int prioFuel = Integer.compare(getPrioriteCarburant(v), getPrioriteCarburant(bestProche));
+                            if (prioFuel < 0) {
+                                bestProche = v;
+                            }
+                        }
+                    }
+                }
+            }
+            if (bestProche != null) {
+                return bestProche;
+            }
+        }
+
         // Règle de remplissage : si un véhicule est déjà entamé dans CE groupe,
         // on privilégie son remplissage (split possible) en prenant la capacité la plus
         // proche du besoin.
