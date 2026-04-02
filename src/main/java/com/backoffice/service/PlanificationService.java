@@ -727,6 +727,7 @@ public class PlanificationService {
         List<Reservation> ordreTraitement = new ArrayList<>();
         ordreTraitement.addAll(phaseNonAssigne);
         ordreTraitement.addAll(phaseVol);
+        Set<Reservation> setPhaseNonAssigne = new HashSet<>(phaseNonAssigne);
         for (int i = 0; i < ordreTraitement.size(); i++) {
             ordreTraitement.get(i).setOrderIndex(i);
         }
@@ -746,13 +747,15 @@ public class PlanificationService {
         });
         boolean retourDeclencheur = eventIsReturn || retourDansIntervalle;
         boolean existeVolApresRetour = phaseVol.stream()
-            .anyMatch(r -> r.getHeure() != null && r.getHeure().after(debutIntervalle));
+                .anyMatch(r -> r.getHeure() != null && r.getHeure().after(debutIntervalle));
 
         // Affectation par réservation (split immédiat si besoin)
         for (Reservation resa : ordreTraitement) {
             int reste = remainingPax.get(resa);
             while (reste > 0) {
-                Vehicule best = choisirVehiculeOptimal(capaciteRestanteParVehicule, tracking, reste);
+                boolean prioriserDisponibilite = setPhaseNonAssigne.contains(resa);
+                Vehicule best = choisirVehiculeOptimal(capaciteRestanteParVehicule, tracking, reste,
+                        prioriserDisponibilite);
                 if (best == null) {
                     break; // plus de capacité disponible
                 }
@@ -837,7 +840,39 @@ public class PlanificationService {
     // Tie-break : moins de trajets, puis carburant (Diesel>Essence), puis plus
     // petite capacité si encore égal
     private Vehicule choisirVehiculeOptimal(Map<Vehicule, Integer> capaciteRestanteParVehicule,
-            TrackingData tracking, int besoin) {
+            TrackingData tracking, int besoin, boolean prioriserDisponibilite) {
+        Set<Vehicule> candidatsDisponibilite = null;
+        if (prioriserDisponibilite) {
+            Time dispoMin = null;
+            for (Map.Entry<Vehicule, Integer> e : capaciteRestanteParVehicule.entrySet()) {
+                Vehicule v = e.getKey();
+                int cap = e.getValue();
+                if (cap <= 0) {
+                    continue;
+                }
+
+                Time dispo = getDisponibiliteEffective(v, tracking);
+                if (dispoMin == null || (dispo != null && dispo.before(dispoMin))) {
+                    dispoMin = dispo;
+                }
+            }
+
+            if (dispoMin != null) {
+                candidatsDisponibilite = new HashSet<>();
+                for (Map.Entry<Vehicule, Integer> e : capaciteRestanteParVehicule.entrySet()) {
+                    Vehicule v = e.getKey();
+                    int cap = e.getValue();
+                    if (cap <= 0) {
+                        continue;
+                    }
+                    Time dispo = getDisponibiliteEffective(v, tracking);
+                    if (dispo != null && dispo.equals(dispoMin)) {
+                        candidatsDisponibilite.add(v);
+                    }
+                }
+            }
+        }
+
         // Règle de remplissage : si un véhicule est déjà entamé dans CE groupe,
         // on privilégie son remplissage (split possible) en prenant la capacité la plus
         // proche du besoin.
@@ -847,6 +882,8 @@ public class PlanificationService {
             Vehicule v = e.getKey();
             int cap = e.getValue();
             if (cap <= 0)
+                continue;
+            if (candidatsDisponibilite != null && !candidatsDisponibilite.contains(v))
                 continue;
             boolean entameDansGroupe = cap < v.getPlace();
             if (!entameDansGroupe)
@@ -879,6 +916,8 @@ public class PlanificationService {
             Vehicule v = e.getKey();
             int cap = e.getValue();
             if (cap <= 0)
+                continue;
+            if (candidatsDisponibilite != null && !candidatsDisponibilite.contains(v))
                 continue;
 
             if (cap >= besoin) {
@@ -915,6 +954,8 @@ public class PlanificationService {
             int cap = e.getValue();
             if (cap <= 0)
                 continue;
+            if (candidatsDisponibilite != null && !candidatsDisponibilite.contains(v))
+                continue;
             if (best == null || cap > capaciteRestanteParVehicule.get(best)) {
                 best = v;
             } else if (best != null && cap == capaciteRestanteParVehicule.get(best)) {
@@ -931,6 +972,16 @@ public class PlanificationService {
             }
         }
         return best;
+    }
+
+    private Time getDisponibiliteEffective(Vehicule vehicule, TrackingData tracking) {
+        Time retour = tracking.heureRetourParVehicule.get(vehicule.getId());
+        Time dispoMetier = vehicule.getHeureDisponibilite();
+        if (retour == null)
+            return dispoMetier;
+        if (dispoMetier == null)
+            return retour;
+        return retour.after(dispoMetier) ? retour : dispoMetier;
     }
 
     /**
