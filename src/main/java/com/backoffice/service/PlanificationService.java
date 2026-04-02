@@ -745,6 +745,8 @@ public class PlanificationService {
                     && retour.compareTo(finFenetreIntervalle) <= 0;
         });
         boolean retourDeclencheur = eventIsReturn || retourDansIntervalle;
+        boolean existeVolApresRetour = phaseVol.stream()
+            .anyMatch(r -> r.getHeure() != null && r.getHeure().after(debutIntervalle));
 
         // Affectation par réservation (split immédiat si besoin)
         for (Reservation resa : ordreTraitement) {
@@ -773,9 +775,11 @@ public class PlanificationService {
                 capaciteRestanteParVehicule.put(best, cap - aPrendre);
                 reste -= aPrendre;
 
-                // Si déclenchement par retour (retour direct ou dans l'intervalle) + non
-                // assignés et le véhicule devient plein
-                if (retourDeclencheur && !phaseNonAssigne.isEmpty() && capaciteRestanteParVehicule.get(best) == 0) {
+                // Départ immédiat seulement s'il n'y a pas de vol après le retour dans
+                // l'intervalle. Sinon on attend le départ groupé.
+                if (retourDeclencheur && !phaseNonAssigne.isEmpty()
+                        && capaciteRestanteParVehicule.get(best) == 0
+                        && !existeVolApresRetour) {
                     vp.setHeureDepart(debutIntervalle); // départ immédiat
                 }
             }
