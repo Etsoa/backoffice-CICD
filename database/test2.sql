@@ -22,13 +22,17 @@ INSERT INTO client (id_client, nom, prenom, email) VALUES
 
 -- Lieux
 INSERT INTO lieu (code, libelle) VALUES
-('TNR', 'Aéroport'),
-('H1', 'Hotel1');
+('TNR', 'Aeroport Ivato'),
+('H1', 'Hotel 1'),
+('H2', 'Hotel 2');
 
+-- ============================================
 -- Hôtels
+-- ============================================
 INSERT INTO hotel (libelle) VALUES
-('Aéroport Ivato'),
-('Hotel1');
+('Aeroport Ivato'),
+('Hotel 1'),
+('Hotel 2');
 
 -- Configuration du délai d'attente
 INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VALUES
@@ -36,8 +40,15 @@ INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VA
 
 -- Distances (Common for all scenarios)
 INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
-(1, 2, 50.00),      -- Aéroport to Hotel1
-(2, 1, 50.00);      -- Hotel1 to Aéroport
+-- From Aeroport Ivato (TNR) to hotels
+(1, 2, 90.00),      -- TNR to Hotel 1
+(1, 3, 65.00),      -- TNR to Hotel 2
+-- Between hotels
+(2, 3, 10.00),      -- Hotel 1 to Hotel 2
+(3, 2, 10.00),      -- Hotel 2 to Hotel 1
+-- Return paths
+(2, 1, 90.00),      -- Hotel 1 to TNR
+(3, 1, 65.00);      -- Hotel 2 to TNR
 
 -- ============================================
 -- SCENARIO 1: 1 Vehicle, 4 Small Reservations
@@ -47,13 +58,16 @@ INSERT INTO distance (lieu_depart, lieu_arrivee, km) VALUES
 -- Attendu: 1 groupe, 1 véhicule, tous ensemble
 -- ============================================
 INSERT INTO vehicule (reference, place, type_carburant, vitesse_moyenne, heure_disponibilite) VALUES
-('V1_S1', 20, 1, 50.00, '00:00:00');
+('V1', 10, 1, 60.00, '00:00:00'),
+('V2', 8, 1, 60.00, '08:00:00'),
+('V3', 8, 2, 60.00, '08:00:00'),
+('V4', 12, 2, 60.00, '09:00:00');
 
 INSERT INTO reservation (reference, nombre, date, heure, hotel, client) VALUES
-(1001, 5, '2026-04-02', '00:15:00', 2, 'C001'),
-(1002, 5, '2026-04-02', '00:20:00', 2, 'C002'),
-(1003, 5, '2026-04-02', '00:30:00', 2, 'C003'),
-(1004, 5, '2026-04-02', '00:35:00', 2, 'C004');
+(1001, 20, '2026-04-02', '06:00:00', 2, 'C001'),
+(1002, 6, '2026-04-02', '08:15:00', 2, 'C002'),
+(1003, 10, '2026-04-02', '09:00:00', 2, 'C003'),
+(1004, 6, '2026-04-02', '09:10:00', 3, 'C004');
 
 -- ============================================
 -- SCENARIO 2: 2 Vehicles, 3 Reservations

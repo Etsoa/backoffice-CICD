@@ -26,12 +26,14 @@ INSERT INTO client (id_client, nom, prenom, email) VALUES
 -- Lieux
 INSERT INTO lieu (code, libelle) VALUES
 ('TNR', 'Aéroport'),
-('H1', 'Hotel1');
+('H1', 'Hotel1'),
+('H2', 'Hotel2');
 
 -- Hôtels
 INSERT INTO hotel (libelle) VALUES
 ('Aéroport Ivato'),
-('Hotel1');
+('Hotel1'),
+('Hotel2');
 
 -- Configuration du délai d'attente
 INSERT INTO configuration_attente (temps_attente_minutes, description, actif) VALUES
